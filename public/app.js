@@ -61,7 +61,7 @@ async function fetchTournamentConfig() {
   }
 }
 
-// Dropdown Component Controller (scroll & select, no search filter)
+// Dropdown Component Controller with Full Keyboard & Focus Navigation
 class SearchableCombobox {
   constructor(comboboxId, inputId, listId) {
     this.comboboxId = comboboxId;
@@ -69,6 +69,8 @@ class SearchableCombobox {
     this.listId = listId;
     this.isOpen = false;
     this.items = [];
+    this.highlightedIndex = -1;
+    this.isSelecting = false;
     this.isInitialized = false;
 
     this.init();
@@ -91,6 +93,42 @@ class SearchableCombobox {
     return (el && typeof el.querySelector === 'function') ? el.querySelector('.dropdown-toggle') : null;
   }
 
+  getVisibleItems() {
+    return this.items.filter(item => item.style.display !== 'none');
+  }
+
+  clearHighlight() {
+    this.items.forEach(i => i.classList.remove('highlighted'));
+    this.highlightedIndex = -1;
+  }
+
+  highlightItem(index) {
+    const visibleItems = this.getVisibleItems();
+    if (visibleItems.length === 0) {
+      this.clearHighlight();
+      return;
+    }
+
+    this.items.forEach(i => i.classList.remove('highlighted'));
+
+    if (index >= 0 && index < visibleItems.length) {
+      this.highlightedIndex = index;
+      const targetItem = visibleItems[index];
+      targetItem.classList.add('highlighted');
+
+      const lEl = this.list;
+      if (lEl && targetItem) {
+        const itemTop = targetItem.offsetTop;
+        const itemBottom = itemTop + targetItem.offsetHeight;
+        if (itemTop < lEl.scrollTop) {
+          lEl.scrollTop = itemTop;
+        } else if (itemBottom > lEl.scrollTop + lEl.clientHeight) {
+          lEl.scrollTop = itemBottom - lEl.clientHeight;
+        }
+      }
+    }
+  }
+
   init() {
     if (this.isInitialized) return;
     const cEl = this.combobox;
@@ -106,10 +144,81 @@ class SearchableCombobox {
     });
 
     iEl.addEventListener('input', () => {
+      if (this.isSelecting) return;
       if (!iEl.readOnly) {
         this.filterItems(iEl.value);
         if (!this.isOpen && iEl.value.trim() !== '') {
           this.open();
+        }
+      }
+    });
+
+    iEl.addEventListener('blur', () => {
+      setTimeout(() => {
+        const active = document.activeElement;
+        const currentBox = this.combobox;
+        if (currentBox && !currentBox.contains(active)) {
+          this.close();
+        }
+      }, 120);
+    });
+
+    // Keyboard navigation: ArrowDown, ArrowUp, Enter, Escape, Tab
+    iEl.addEventListener('keydown', (e) => {
+      if (this.isDisabled) return;
+      const visibleItems = this.getVisibleItems();
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!this.isOpen) {
+          this.open();
+          this.highlightItem(0);
+        } else if (visibleItems.length > 0) {
+          let nextIdx = this.highlightedIndex + 1;
+          if (nextIdx >= visibleItems.length) nextIdx = 0;
+          this.highlightItem(nextIdx);
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!this.isOpen) {
+          this.open();
+          this.highlightItem(visibleItems.length - 1);
+        } else if (visibleItems.length > 0) {
+          let prevIdx = this.highlightedIndex - 1;
+          if (prevIdx < 0) prevIdx = visibleItems.length - 1;
+          this.highlightItem(prevIdx);
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (this.isOpen) {
+          if (this.highlightedIndex >= 0 && this.highlightedIndex < visibleItems.length) {
+            this.selectItem(visibleItems[this.highlightedIndex], true);
+          } else if (visibleItems.length > 0) {
+            this.selectItem(visibleItems[0], true);
+          } else {
+            this.close();
+            if (typeof focusNextInput === 'function') focusNextInput(iEl);
+          }
+        } else {
+          if (iEl.value.trim() !== '') {
+            if (typeof focusNextInput === 'function') focusNextInput(iEl);
+          } else {
+            this.open();
+            this.highlightItem(0);
+          }
+        }
+      } else if (e.key === 'Escape') {
+        if (this.isOpen) {
+          e.preventDefault();
+          this.close();
+        }
+      } else if (e.key === 'Tab') {
+        if (this.isOpen) {
+          if (this.highlightedIndex >= 0 && this.highlightedIndex < visibleItems.length) {
+            this.selectItem(visibleItems[this.highlightedIndex], false);
+          } else {
+            this.close();
+          }
         }
       }
     });
@@ -143,6 +252,13 @@ class SearchableCombobox {
         item.style.display = 'none';
       }
     });
+
+    const visibleItems = this.getVisibleItems();
+    if (visibleItems.length > 0) {
+      this.highlightItem(0);
+    } else {
+      this.clearHighlight();
+    }
   }
 
   setupItems() {
@@ -161,14 +277,14 @@ class SearchableCombobox {
         const scrolled = listEl ? Math.abs(listEl.scrollTop - scrollTopAtStart) : 0;
         if (scrolled < 5) {
           e.preventDefault();
-          this.selectItem(item);
+          this.selectItem(item, true);
         }
       }, { passive: false });
 
       item.addEventListener('mousedown', (e) => {
         e.stopPropagation();
         e.preventDefault();
-        this.selectItem(item);
+        this.selectItem(item, true);
       });
     });
   }
@@ -228,13 +344,17 @@ class SearchableCombobox {
     }
 
     const selected = lEl.querySelector('li.selected');
+    const visibleItems = this.getVisibleItems();
     if (selected) {
+      const selIdx = visibleItems.indexOf(selected);
+      this.highlightItem(selIdx >= 0 ? selIdx : 0);
       setTimeout(() => {
         if (this.list) {
           this.list.scrollTop = selected.offsetTop - this.list.clientHeight / 2 + selected.clientHeight / 2;
         }
       }, 50);
     } else {
+      this.highlightItem(0);
       lEl.scrollTop = 0;
     }
   }
@@ -245,10 +365,11 @@ class SearchableCombobox {
     if (!this.isOpen || !cEl || !iEl) return;
     this.isOpen = false;
     cEl.classList.remove('open');
+    this.clearHighlight();
     iEl.dispatchEvent(new Event('blur'));
   }
 
-  selectItem(item) {
+  selectItem(item, advanceFocus = true) {
     const iEl = this.input;
     if (!item || !iEl) return;
     const val = item.getAttribute('data-value');
@@ -258,14 +379,25 @@ class SearchableCombobox {
     item.classList.add('selected');
 
     this.close();
+
+    this.isSelecting = true;
     iEl.dispatchEvent(new Event('input', { bubbles: true }));
     iEl.dispatchEvent(new Event('change', { bubbles: true }));
+    this.isSelecting = false;
+
+    this.close();
+
+    if (advanceFocus && typeof focusNextInput === 'function') {
+      focusNextInput(iEl);
+    }
   }
 
   reset() {
+    this.clearHighlight();
     this.items.forEach(i => i.classList.remove('selected'));
     const iEl = this.input;
     if (iEl) iEl.value = '';
+    this.close();
   }
 
   setValue(val) {
@@ -275,8 +407,12 @@ class SearchableCombobox {
       iEl.value = val;
       this.items.forEach(i => i.classList.remove('selected'));
       item.classList.add('selected');
+      this.close();
+      this.isSelecting = true;
       iEl.dispatchEvent(new Event('input', { bubbles: true }));
       iEl.dispatchEvent(new Event('change', { bubbles: true }));
+      this.isSelecting = false;
+      this.close();
     }
   }
 }
@@ -358,6 +494,14 @@ function goToStep(stepNum) {
     stepTab2.classList.add('active');
     stepLine.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      if (categoryInput) {
+        categoryInput.focus();
+        if (categoryCombobox && !categoryInput.value) {
+          categoryCombobox.open();
+        }
+      }
+    }, 150);
   } else {
     step2.classList.remove('active');
     step1.classList.add('active');
@@ -366,6 +510,11 @@ function goToStep(stepNum) {
     stepTab1.classList.add('active');
     stepLine.classList.remove('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      if (nameInput) {
+        nameInput.focus();
+      }
+    }, 150);
   }
 }
 
@@ -405,6 +554,11 @@ if (enterPortalBtn) {
 
 function startIntroProgress() {
   if (!introProgressBar) return;
+  if (introProgressTimer) {
+    clearInterval(introProgressTimer);
+    introProgressTimer = null;
+  }
+  introProgressBar.style.width = '0%';
   let step = 0;
   const interval = 25;
   const totalSteps = 2400 / interval;
@@ -1367,6 +1521,13 @@ function showSuccess(result, payload) {
 
   if (cardsContainer) cardsContainer.classList.remove('hidden');
 
+  const waBtn = document.getElementById('successWhatsAppBtn');
+  if (waBtn) {
+    const waNum = window.WHATSAPP_NUMBER || '966569407699';
+    const msgText = `Hi, I have an inquiry about my tournament entry for Navodaya Open 2026.\nTeam ID: ${teamId}\nPlayer: ${mainName}\nCategory: ${category}${flight ? ' (' + flight + ')' : ''}`;
+    waBtn.href = `https://wa.me/${waNum}?text=${encodeURIComponent(msgText)}`;
+  }
+
   formPanel.classList.remove('active');
   setTimeout(() => {
     successPanel.classList.add('active');
@@ -1379,35 +1540,219 @@ function showError(msg) {
   generalError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-resetBtn.addEventListener('click', () => {
+/**
+ * Reset form state and return to the Intro Splash screen
+ */
+function resetToIntro() {
   form.reset();
 
-  genderCombobox.reset();
-  partnerGenderCombobox.reset();
-  categoryCombobox.reset();
-  flightCombobox.reset();
+  if (genderCombobox) genderCombobox.reset();
+  if (partnerGenderCombobox) partnerGenderCombobox.reset();
+  if (categoryCombobox) categoryCombobox.reset();
+  if (flightCombobox) flightCombobox.reset();
   if (nationalityCombobox) nationalityCombobox.reset();
   if (partnerNationalityCombobox) partnerNationalityCombobox.reset();
 
   if (dobNativePicker) dobNativePicker.value = '';
   if (partnerDobNativePicker) partnerDobNativePicker.value = '';
 
-  partnerSection.classList.add('hidden');
+  if (partnerSection) partnerSection.classList.add('hidden');
   updateCategoryAndAgeUI();
 
   [nameInput, phoneInput, emailInput, iqamaInput, genderInput, dobInput, nationalityInput, clubInput, categoryInput, flightInput, partnerNameInput, partnerPhoneInput, partnerIqamaInput, partnerGenderInput, partnerDobInput, partnerNationalityInput].forEach(inp => {
-    inp.classList.remove('touched');
-    inp.disabled = false;
+    if (inp) {
+      inp.classList.remove('touched');
+      inp.disabled = false;
+    }
   });
 
   goToStep(1);
 
-  successPanel.classList.remove('active');
+  if (successPanel) successPanel.classList.remove('active');
+  if (formPanel) formPanel.classList.remove('active');
+  if (generalError) generalError.classList.add('hidden');
 
   setTimeout(() => {
-    formPanel.classList.add('active');
-    generalError.classList.add('hidden');
-  }, 300);
+    isIntroTransitioned = false;
+    if (introPanel) {
+      introPanel.style.opacity = '';
+      introPanel.style.transform = '';
+      introPanel.classList.add('active');
+    }
+    startIntroProgress();
+  }, 250);
+}
+
+if (resetBtn) {
+  resetBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetToIntro();
+  });
+}
+
+if (successPanel) {
+  successPanel.addEventListener('click', () => {
+    resetToIntro();
+  });
+}
+
+/**
+ * Closes any currently open combobox dropdown menus
+ */
+function closeAllComboboxes() {
+  [genderCombobox, partnerGenderCombobox, categoryCombobox, flightCombobox, nationalityCombobox, partnerNationalityCombobox].forEach(cb => {
+    if (cb && cb.isOpen) {
+      cb.close();
+    }
+  });
+}
+
+/**
+ * Fast Keyboard Navigation & Enter-Key Behavior
+ * Allows operators to rapidly type and advance focus through form fields using the Enter key.
+ */
+function focusNextInput(currentInput) {
+  if (!currentInput) return;
+  closeAllComboboxes();
+
+  const isStep1Active = step1 && step1.classList.contains('active');
+  const isStep2Active = step2 && step2.classList.contains('active');
+
+  if (isStep1Active) {
+    const step1Inputs = [
+      nameInput,
+      phoneInput,
+      emailInput,
+      iqamaInput,
+      genderInput,
+      dobInput,
+      nationalityInput,
+      clubInput
+    ].filter(el => el && !el.disabled && el.offsetParent !== null);
+
+    const idx = step1Inputs.indexOf(currentInput);
+
+    if (idx >= 0 && idx < step1Inputs.length - 1) {
+      const next = step1Inputs[idx + 1];
+      next.focus();
+      if (next === genderInput && genderCombobox && !genderInput.value) {
+        genderCombobox.open();
+      } else if (next === nationalityInput && nationalityCombobox && !nationalityInput.value) {
+        nationalityCombobox.open();
+      }
+    } else if (idx === step1Inputs.length - 1 || currentInput === clubInput) {
+      // Last field in Step 1 -> advance to Step 2
+      if (validateStep1()) {
+        goToStep(2);
+      } else {
+        const invalidInput = step1Inputs.find(inp => {
+          if (inp.classList.contains('touched')) {
+            const errSpan = inp.closest('.input-group')?.querySelector('.error-text');
+            return errSpan && errSpan.textContent.trim() !== '';
+          }
+          return false;
+        });
+        if (invalidInput) invalidInput.focus();
+      }
+    }
+  } else if (isStep2Active) {
+    const step2Inputs = [
+      categoryInput,
+      flightInput
+    ];
+
+    if (partnerSection && !partnerSection.classList.contains('hidden')) {
+      step2Inputs.push(
+        partnerNameInput,
+        partnerPhoneInput,
+        partnerIqamaInput
+      );
+      if (partnerGenderCombobox && !partnerGenderCombobox.isDisabled && partnerGenderInput && !partnerGenderInput.disabled) {
+        step2Inputs.push(partnerGenderInput);
+      }
+      step2Inputs.push(
+        partnerDobInput,
+        partnerNationalityInput
+      );
+    }
+
+    const validInputs = step2Inputs.filter(el => el && !el.disabled && el.offsetParent !== null);
+    const idx = validInputs.indexOf(currentInput);
+
+    if (idx >= 0 && idx < validInputs.length - 1) {
+      const next = validInputs[idx + 1];
+      next.focus();
+      if (next === flightInput && flightCombobox && !flightInput.value) {
+        flightCombobox.open();
+      } else if (next === partnerGenderInput && partnerGenderCombobox && !partnerGenderInput.value) {
+        partnerGenderCombobox.open();
+      } else if (next === partnerNationalityInput && partnerNationalityCombobox && !partnerNationalityInput.value) {
+        partnerNationalityCombobox.open();
+      }
+    } else if (idx === validInputs.length - 1 || currentInput === validInputs[validInputs.length - 1]) {
+      // Last field in Step 2 -> trigger submission
+      if (submitBtn && !submitBtn.disabled) {
+        submitBtn.focus();
+        submitBtn.click();
+      }
+    }
+  }
+}
+
+// Bind Enter key listener on standard text/number/tel/email inputs
+[
+  nameInput,
+  phoneInput,
+  emailInput,
+  iqamaInput,
+  dobInput,
+  clubInput,
+  partnerNameInput,
+  partnerPhoneInput,
+  partnerIqamaInput,
+  partnerDobInput
+].forEach(input => {
+  if (!input) return;
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      focusNextInput(input);
+    }
+  });
+});
+
+// Bind Enter key on country code selectors to move focus to phone
+const countryCodeSelect = document.getElementById('countryCodeSelect');
+if (countryCodeSelect) {
+  countryCodeSelect.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (phoneInput) phoneInput.focus();
+    }
+  });
+}
+
+const partnerCountryCodeSelect = document.getElementById('partnerCountryCodeSelect');
+if (partnerCountryCodeSelect) {
+  partnerCountryCodeSelect.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (partnerPhoneInput) partnerPhoneInput.focus();
+    }
+  });
+}
+
+// Global Enter key behavior on intro and success screens for quick workflow
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    if (introPanel && introPanel.classList.contains('active')) {
+      e.preventDefault();
+      transitionToForm();
+    } else if (successPanel && successPanel.classList.contains('active')) {
+      e.preventDefault();
+      resetToIntro();
+    }
+  }
 });
 
 window.addEventListener('DOMContentLoaded', () => {

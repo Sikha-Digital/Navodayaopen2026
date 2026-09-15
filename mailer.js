@@ -401,7 +401,12 @@ function generateConfirmationEmailHtml(reg) {
       <!-- Footer -->
       <div class="footer">
         <p style="margin: 0 0 6px;">Thank you for registering for <strong>Navodaya Open 2026</strong>!</p>
-        <p style="margin: 0;">For queries or assistance, please contact tournament organizers at <a href="mailto:support@navodayaopen.com">support@navodayaopen.com</a></p>
+        <p style="margin: 0 0 12px;">For queries or assistance, please contact tournament organizers at <a href="mailto:navodayaopen2026@gmail.com">navodayaopen2026@gmail.com</a></p>
+        <div style="margin-top: 10px; text-align: center;">
+          <a href="https://wa.me/966569407699?text=Hi%2C%20I%20have%20an%20inquiry%20regarding%20Navodaya%20Open%202026%20(Team%20ID%3A%20${encodeURIComponent(reg.teamId || 'Entry')})" style="display: inline-block; background-color: #25D366; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 13px; padding: 9px 18px; border-radius: 20px; box-shadow: 0 4px 12px rgba(37,211,102,0.35);">
+            &#128172; Chat on WhatsApp
+          </a>
+        </div>
       </div>
 
     </div>
@@ -452,7 +457,8 @@ Partner Nationality: ${reg.partnerNationality || 'N/A'}
 3. Non-marking badminton shoes are mandatory on all tournament courts.
 4. The decisions of the Tournament Committee and Referees are final and binding.
 
-For inquiries, please contact: support@navodayaopen.com
+For inquiries, please contact: navodayaopen2026@gmail.com
+WhatsApp Support: https://wa.me/966569407699
 `.trim();
 }
 
