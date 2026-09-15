@@ -18,6 +18,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend files (exact UI preservation)
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
 /**

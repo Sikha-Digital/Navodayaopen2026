@@ -1,11 +1,4 @@
 {
-  "outputDirectory": ".",
   "cleanUrls": false,
-  "trailingSlash": false,
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    }
-  ]
+  "trailingSlash": false
 }

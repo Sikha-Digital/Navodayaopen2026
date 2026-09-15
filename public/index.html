@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <meta name="description"
+    content="Official player registration & invitation portal for Navodaya Open 2026 International Badminton Tournament. Register your details directly to Google Sheets.">
+  <title>Navodaya Open 2026 - International Badminton Tournament</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+  <!-- Animated Background Blobs -->
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="card-container">
+    <!-- Animated Intro Splash Panel -->
+    <div id="introPanel" class="panel active intro-panel">
+      <div class="intro-content">
+        <div class="intro-logo-wrapper">
+          <img class="intro-logo"
+            src="https://res.cloudinary.com/dfciyxbjo/image/upload/v1789324461/logo_open_ralqqy.png"
+            alt="Navodaya Open 2026 Logo">
+          <div class="shimmer-sweep"></div>
+        </div>
+        <div class="intro-badge">
+          <svg class="badminton-shuttle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="5" r="3" />
+            <path d="M12 8v13" />
+            <path d="M8 12l4-4 4 4" />
+            <path d="M6 16l6-6 6 6" />
+          </svg>
+          <span>INTERNATIONAL DOUBLES CHAMPIONSHIP</span>
+        </div>
+        <p class="intro-date">OCTOBER 30 - 31, 2026 &bull; DAMMAM, KSA</p>
+
+        <div class="intro-action">
+          <button type="button" id="enterPortalBtn" class="enter-btn">
+            <span>Register Now</span>
+            <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+          <div class="intro-progress">
+            <div class="progress-bar" id="introProgressBar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Panel -->
+    <div id="formPanel" class="panel">
+      <div class="header">
+        <div class="logo-container">
+          <img class="logo-img tournament-logo"
+            src="https://res.cloudinary.com/dfciyxbjo/image/upload/v1789324461/logo_open_ralqqy.png"
+            alt="Navodaya Open 2026 Logo">
+        </div>
+        <p class="subtitle">International Doubles Badminton Tournament</p>
+        <div class="event-meta-tag">Oct 30-31, 2026 &bull; Dammam, Saudi Arabia</div>
+      </div>
+
+      <!-- Step Progress Indicator -->
+      <div class="step-indicator">
+        <div class="step-item active" id="stepTab1">
+          <div class="step-icon">1</div>
+          <span class="step-text">Player Details</span>
+        </div>
+        <div class="step-line" id="stepLine"></div>
+        <div class="step-item" id="stepTab2">
+          <div class="step-icon">2</div>
+          <span class="step-text">Event & Partner</span>
+        </div>
+      </div>
+
+      <form id="registrationForm" novalidate>
+        <!-- STEP 1: Primary Player Information -->
+        <div id="step1" class="form-step active">
+          <!-- Full Name Input Group -->
+          <div class="input-group">
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <input type="text" id="nameInput" required placeholder=" " autocomplete="name">
+              <label for="nameInput">Full Name</label>
+            </div>
+            <span class="error-text" id="nameError">Full Name is required</span>
+          </div>
+
+          <!-- Phone Input Group -->
+          <div class="input-group">
+            <div class="input-wrapper prefixed">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                  d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <select id="countryCodeSelect" class="country-code-select" aria-label="Country Code">
+                <option value="+966" selected>🇸🇦 +966 (KSA)</option>
+                <option value="+971">🇦🇪 +971 (UAE)</option>
+                <option value="+974">🇶🇦 +974 (Qatar)</option>
+                <option value="+965">🇰🇼 +965 (Kuwait)</option>
+                <option value="+973">🇧🇭 +973 (Bahrain)</option>
+                <option value="+968">🇴🇲 +968 (Oman)</option>
+                <option value="+91">🇮🇳 +91 (India)</option>
+                <option value="+92">🇵🇰 +92 (Pakistan)</option>
+                <option value="+880">🇧🇩 +880 (Bangladesh)</option>
+                <option value="+94">🇱🇰 +94 (Sri Lanka)</option>
+                <option value="+63">🇵🇭 +63 (Philippines)</option>
+                <option value="+20">🇪🇬 +20 (Egypt)</option>
+                <option value="+962">🇯🇴 +962 (Jordan)</option>
+                <option value="+961">🇱🇧 +961 (Lebanon)</option>
+                <option value="+249">🇸🇩 +249 (Sudan)</option>
+                <option value="+967">🇾🇪 +967 (Yemen)</option>
+                <option value="+1">🇺🇸 +1 (USA/CAN)</option>
+                <option value="+44">🇬🇧 +44 (UK)</option>
+                <option value="+60">🇲🇾 +60 (Malaysia)</option>
+                <option value="+65">🇸🇬 +65 (Singapore)</option>
+                <option value="+62">🇮🇩 +62 (Indonesia)</option>
+                <option value="+61">🇦🇺 +61 (Australia)</option>
+                <option value="+977">🇳🇵 +977 (Nepal)</option>
+                <option value="+216">🇹🇳 +216 (Tunisia)</option>
+                <option value="+212">🇲🇦 +212 (Morocco)</option>
+                <option value="+213">🇩🇿 +213 (Algeria)</option>
+                <option value="+90">🇹🇷 +90 (Turkey)</option>
+                <option value="+49">🇩🇪 +49 (Germany)</option>
+                <option value="+33">🇫🇷 +33 (France)</option>
+                <option value="+39">🇮🇹 +39 (Italy)</option>
+                <option value="+34">🇪🇸 +34 (Spain)</option>
+                <option value="+86">🇨🇳 +86 (China)</option>
+                <option value="+81">🇯🇵 +81 (Japan)</option>
+                <option value="+82">🇰🇷 +82 (South Korea)</option>
+                <option value="+55">🇧🇷 +55 (Brazil)</option>
+                <option value="+27">🇿🇦 +27 (South Africa)</option>
+                <option value="+234">🇳🇬 +234 (Nigeria)</option>
+                <option value="+254">🇰🇪 +254 (Kenya)</option>
+              </select>
+              <input type="tel" id="phoneInput" required placeholder=" " autocomplete="tel" maxlength="15">
+              <label for="phoneInput">Phone / WhatsApp Number</label>
+            </div>
+            <span class="error-text" id="phoneError">Valid phone number is required</span>
+          </div>
+
+          <!-- Email Input Group -->
+          <div class="input-group">
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <input type="email" id="emailInput" required placeholder=" " autocomplete="email">
+              <label for="emailInput">Email Address</label>
+            </div>
+            <span class="error-text" id="emailError">Valid email address is required</span>
+          </div>
+
+          <!-- Iqama / ID Number Input Group -->
+          <div class="input-group">
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <circle cx="9" cy="10" r="2" />
+                <line x1="14" y1="9" x2="18" y2="9" />
+                <line x1="14" y1="13" x2="18" y2="13" />
+                <line x1="7" y1="16" x2="17" y2="16" />
+              </svg>
+              <input type="text" id="iqamaInput" required placeholder=" " autocomplete="off" maxlength="30">
+              <label for="iqamaInput">Iqama / ID Number</label>
+            </div>
+            <span class="error-text" id="iqamaError">Iqama / ID Number is required (min 5 chars)</span>
+          </div>
+
+          <!-- Side-by-side Row for Gender and Date of Birth -->
+          <div class="form-row">
+            <!-- Gender Combobox -->
+            <div class="input-group combobox" id="genderCombobox">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 15v-6M9 12h6" />
+                </svg>
+                <input type="text" id="genderInput" required placeholder=" " autocomplete="off" readonly>
+                <label for="genderInput">Gender</label>
+                <button type="button" class="dropdown-toggle" aria-label="Toggle Gender Dropdown">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <ul class="dropdown-list" id="genderList">
+                  <li data-value="Male">Male</li>
+                  <li data-value="Female">Female</li>
+                </ul>
+              </div>
+              <span class="error-text" id="genderError">Gender is required</span>
+            </div>
+
+            <!-- Date of Birth Input Group -->
+            <div class="input-group">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <input type="text" id="dobInput" required placeholder=" " autocomplete="bday" maxlength="10" inputmode="numeric" data-placeholder="DD-MM-YYYY">
+                <label for="dobInput">Date of Birth</label>
+                <input type="date" id="dobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" tabindex="-1" aria-hidden="true">
+                <button type="button" class="calendar-btn" id="dobPickerBtn" aria-label="Open Calendar Date Picker" title="Open Calendar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </button>
+              </div>
+              <span class="error-text" id="dobError">Date of Birth is required (DD-MM-YYYY)</span>
+            </div>
+          </div>
+
+          <!-- Side-by-side Row for Nationality and City / Club Name -->
+          <div class="form-row">
+            <!-- Nationality Combobox -->
+            <div class="input-group combobox" id="nationalityCombobox">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                  <line x1="4" y1="22" x2="4" y2="15" />
+                </svg>
+                <input type="text" id="nationalityInput" required placeholder=" " autocomplete="off">
+                <label for="nationalityInput">Nationality</label>
+                <button type="button" class="dropdown-toggle" aria-label="Toggle Nationality Dropdown">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <ul class="dropdown-list" id="nationalityList">
+                  <li data-value="Saudi Arabia">Saudi Arabia</li>
+                  <li data-value="India">India</li>
+                  <li data-value="Philippines">Philippines</li>
+                  <li data-value="Pakistan">Pakistan</li>
+                  <li data-value="Bangladesh">Bangladesh</li>
+                  <li data-value="Sri Lanka">Sri Lanka</li>
+                  <li data-value="Egypt">Egypt</li>
+                  <li data-value="Indonesia">Indonesia</li>
+                  <li data-value="Malaysia">Malaysia</li>
+                  <li data-value="United Arab Emirates">United Arab Emirates</li>
+                  <li data-value="Qatar">Qatar</li>
+                  <li data-value="Kuwait">Kuwait</li>
+                  <li data-value="Bahrain">Bahrain</li>
+                  <li data-value="Oman">Oman</li>
+                  <li data-value="Sudan">Sudan</li>
+                  <li data-value="Yemen">Yemen</li>
+                  <li data-value="Jordan">Jordan</li>
+                  <li data-value="Lebanon">Lebanon</li>
+                  <li data-value="Nepal">Nepal</li>
+                  <li data-value="United Kingdom">United Kingdom</li>
+                  <li data-value="United States">United States</li>
+                  <li data-value="Canada">Canada</li>
+                  <li data-value="Australia">Australia</li>
+                  <li data-value="China">China</li>
+                  <li data-value="Japan">Japan</li>
+                  <li data-value="South Korea">South Korea</li>
+                  <li data-value="Thailand">Thailand</li>
+                  <li data-value="Vietnam">Vietnam</li>
+                  <li data-value="Singapore">Singapore</li>
+                  <li data-value="Turkey">Turkey</li>
+                  <li data-value="Germany">Germany</li>
+                  <li data-value="France">France</li>
+                  <li data-value="Italy">Italy</li>
+                  <li data-value="Spain">Spain</li>
+                  <li data-value="Netherlands">Netherlands</li>
+                  <li data-value="Sweden">Sweden</li>
+                  <li data-value="Switzerland">Switzerland</li>
+                  <li data-value="South Africa">South Africa</li>
+                  <li data-value="Nigeria">Nigeria</li>
+                  <li data-value="Kenya">Kenya</li>
+                  <li data-value="Morocco">Morocco</li>
+                  <li data-value="Tunisia">Tunisia</li>
+                  <li data-value="Algeria">Algeria</li>
+                  <li data-value="Brazil">Brazil</li>
+                  <li data-value="Argentina">Argentina</li>
+                  <li data-value="Afghanistan">Afghanistan</li>
+                  <li data-value="Iran">Iran</li>
+                  <li data-value="Iraq">Iraq</li>
+                  <li data-value="Syria">Syria</li>
+                  <li data-value="Palestine">Palestine</li>
+                </ul>
+              </div>
+              <span class="error-text" id="nationalityError">Nationality is required</span>
+            </div>
+
+            <!-- City / Club Name Input Group -->
+            <div class="input-group">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                <input type="text" id="clubInput" required placeholder=" " autocomplete="off">
+                <label for="clubInput">City / Club Name</label>
+              </div>
+              <span class="error-text" id="clubError">City or Club name is required</span>
+            </div>
+          </div>
+
+          <!-- Next Step Button -->
+          <button type="button" id="nextStepBtn" class="submit-btn next-btn">
+            <span>Next: Event & Partner Details</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+              stroke-linejoin="round" style="width: 18px; height: 18px; margin-left: 6px;">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <!-- STEP 2: Event Category & Partner Details -->
+        <div id="step2" class="form-step">
+          <!-- Side-by-side Row for Event Category and Level / Flight -->
+          <div class="form-row">
+            <!-- Event Category Combobox -->
+            <div class="input-group combobox" id="categoryCombobox">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                  <path d="M4 22h16" />
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2z" />
+                </svg>
+                <input type="text" id="categoryInput" required placeholder=" " autocomplete="off" readonly>
+                <label for="categoryInput">Event Category</label>
+                <button type="button" class="dropdown-toggle" aria-label="Toggle Event Category Dropdown">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <ul class="dropdown-list" id="categoryList">
+                  <li data-value="Mens Doubles" data-doubles="true">Mens Doubles</li>
+                  <li data-value="Womens Doubles" data-doubles="true">Womens Doubles</li>
+                  <li data-value="Mixed Doubles" data-doubles="true">Mixed Doubles</li>
+                  <li data-value="Girls Doubles" data-doubles="true">Girls Doubles</li>
+                  <li data-value="Boys Doubles" data-doubles="true">Boys Doubles</li>
+                </ul>
+              </div>
+              <span class="error-text" id="categoryError">Category is required</span>
+            </div>
+
+            <!-- Flight / Division Combobox -->
+            <div class="input-group combobox" id="flightCombobox">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                  </polygon>
+                </svg>
+                <input type="text" id="flightInput" required placeholder=" " autocomplete="off" readonly>
+                <label for="flightInput">Level / Flight</label>
+                <button type="button" class="dropdown-toggle" aria-label="Toggle Level Dropdown">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <ul class="dropdown-list" id="flightList">
+                  <li data-value="International">International</li>
+                  <li data-value="Premiere">Premiere</li>
+                  <li data-value="Championship">Championship</li>
+                  <li data-value="F1">F1</li>
+                  <li data-value="F2">F2</li>
+                  <li data-value="F3">F3</li>
+                  <li data-value="F4">F4</li>
+                  <li data-value="F5">F5</li>
+                  <li data-value="F6">F6</li>
+                  <li data-value="Masters 35Plus">Masters 35Plus</li>
+                  <li data-value="Veterance 45Plus">Veterance 45Plus</li>
+                  <li data-value="Under 9">Under 9</li>
+                  <li data-value="Under 11">Under 11</li>
+                  <li data-value="Under 13">Under 13</li>
+                  <li data-value="Under 15">Under 15</li>
+                  <li data-value="Under 17">Under 17</li>
+                </ul>
+              </div> <span class="error-text" id="flightError">Level is required</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Doubles Partner Section -->
+          <div id="partnerSection" class="partner-card hidden">
+            <div class="partner-header">
+              <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <h3>Doubles Partner Details</h3>
+            </div>
+            <!-- Partner Name Input Group -->
+            <div class="input-group">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <input type="text" id="partnerNameInput" placeholder=" " autocomplete="off">
+                <label for="partnerNameInput">Partner Full Name</label>
+              </div>
+              <span class="error-text" id="partnerNameError">Partner Name is required for Doubles</span>
+            </div>
+
+            <!-- Partner Phone Input Group -->
+            <div class="input-group">
+              <div class="input-wrapper prefixed">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                <select id="partnerCountryCodeSelect" class="country-code-select" aria-label="Partner Country Code">
+                  <option value="+966" selected>🇸🇦 +966 (KSA)</option>
+                  <option value="+971">🇦🇪 +971 (UAE)</option>
+                  <option value="+974">🇶🇦 +974 (Qatar)</option>
+                  <option value="+965">🇰🇼 +965 (Kuwait)</option>
+                  <option value="+973">🇧🇭 +973 (Bahrain)</option>
+                  <option value="+968">🇴🇲 +968 (Oman)</option>
+                  <option value="+91">🇮🇳 +91 (India)</option>
+                  <option value="+92">🇵🇰 +92 (Pakistan)</option>
+                  <option value="+880">🇧🇩 +880 (Bangladesh)</option>
+                  <option value="+94">🇱🇰 +94 (Sri Lanka)</option>
+                  <option value="+63">🇵🇭 +63 (Philippines)</option>
+                  <option value="+20">🇪🇬 +20 (Egypt)</option>
+                  <option value="+962">🇯🇴 +962 (Jordan)</option>
+                  <option value="+961">🇱🇧 +961 (Lebanon)</option>
+                  <option value="+249">🇸🇩 +249 (Sudan)</option>
+                  <option value="+967">🇾🇪 +967 (Yemen)</option>
+                  <option value="+1">🇺🇸 +1 (USA/CAN)</option>
+                  <option value="+44">🇬🇧 +44 (UK)</option>
+                  <option value="+60">🇲🇾 +60 (Malaysia)</option>
+                  <option value="+65">🇸🇬 +65 (Singapore)</option>
+                  <option value="+62">🇮🇩 +62 (Indonesia)</option>
+                  <option value="+61">🇦🇺 +61 (Australia)</option>
+                  <option value="+977">🇳🇵 +977 (Nepal)</option>
+                  <option value="+216">🇹🇳 +216 (Tunisia)</option>
+                  <option value="+212">🇲🇦 +212 (Morocco)</option>
+                  <option value="+213">🇩🇿 +213 (Algeria)</option>
+                  <option value="+90">🇹🇷 +90 (Turkey)</option>
+                  <option value="+49">🇩🇪 +49 (Germany)</option>
+                  <option value="+33">🇫🇷 +33 (France)</option>
+                  <option value="+39">🇮🇹 +39 (Italy)</option>
+                  <option value="+34">🇪🇸 +34 (Spain)</option>
+                  <option value="+86">🇨🇳 +86 (China)</option>
+                  <option value="+81">🇯🇵 +81 (Japan)</option>
+                  <option value="+82">🇰🇷 +82 (South Korea)</option>
+                  <option value="+55">🇧🇷 +55 (Brazil)</option>
+                  <option value="+27">🇿🇦 +27 (South Africa)</option>
+                  <option value="+234">🇳🇬 +234 (Nigeria)</option>
+                  <option value="+254">🇰🇪 +254 (Kenya)</option>
+                </select>
+                <input type="tel" id="partnerPhoneInput" placeholder=" " autocomplete="off" maxlength="15">
+                <label for="partnerPhoneInput">Partner Contact Number</label>
+              </div>
+              <span class="error-text" id="partnerPhoneError">Partner Contact Number is required</span>
+            </div>
+
+            <!-- Partner Iqama / ID Number Input Group -->
+            <div class="input-group">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <circle cx="9" cy="10" r="2" />
+                  <line x1="14" y1="9" x2="18" y2="9" />
+                  <line x1="14" y1="13" x2="18" y2="13" />
+                  <line x1="7" y1="16" x2="17" y2="16" />
+                </svg>
+                <input type="text" id="partnerIqamaInput" placeholder=" " autocomplete="off" maxlength="30">
+                <label for="partnerIqamaInput">Partner Iqama / ID Number</label>
+              </div>
+              <span class="error-text" id="partnerIqamaError">Partner Iqama / ID is required (min 5 chars)</span>
+            </div>
+
+            <!-- Side-by-side Row for Partner Gender and Partner DOB -->
+            <div class="form-row">
+              <!-- Partner Gender Combobox -->
+              <div class="input-group combobox" id="partnerGenderCombobox">
+                <div class="input-wrapper">
+                  <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 15v-6M9 12h6" />
+                  </svg>
+                  <input type="text" id="partnerGenderInput" placeholder=" " autocomplete="off" readonly>
+                  <label for="partnerGenderInput">Partner Gender</label>
+                  <button type="button" class="dropdown-toggle" aria-label="Toggle Partner Gender Dropdown">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <ul class="dropdown-list" id="partnerGenderList">
+                    <li data-value="Male">Male</li>
+                    <li data-value="Female">Female</li>
+                  </ul>
+                </div>
+                <span class="error-text" id="partnerGenderError">Partner Gender is required</span>
+              </div>
+
+              <!-- Partner Date of Birth Input Group -->
+              <div class="input-group">
+                <div class="input-wrapper">
+                  <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <input type="text" id="partnerDobInput" placeholder=" " autocomplete="off" maxlength="10" inputmode="numeric" data-placeholder="DD-MM-YYYY">
+                  <label for="partnerDobInput">Date of Birth</label>
+                  <input type="date" id="partnerDobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" tabindex="-1" aria-hidden="true">
+                  <button type="button" class="calendar-btn" id="partnerDobPickerBtn" aria-label="Open Partner Calendar Date Picker" title="Open Calendar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </button>
+                </div>
+                <span class="error-text" id="partnerDobError">Partner Date of Birth is required (DD-MM-YYYY)</span>
+              </div>
+            </div>
+
+            <!-- Partner Nationality Combobox -->
+            <div class="input-group combobox" id="partnerNationalityCombobox">
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                  <line x1="4" y1="22" x2="4" y2="15" />
+                </svg>
+                <input type="text" id="partnerNationalityInput" placeholder=" " autocomplete="off">
+                <label for="partnerNationalityInput">Partner Nationality</label>
+                <button type="button" class="dropdown-toggle" aria-label="Toggle Partner Nationality Dropdown">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <ul class="dropdown-list" id="partnerNationalityList">
+                  <li data-value="Saudi Arabia">Saudi Arabia</li>
+                  <li data-value="India">India</li>
+                  <li data-value="Philippines">Philippines</li>
+                  <li data-value="Pakistan">Pakistan</li>
+                  <li data-value="Bangladesh">Bangladesh</li>
+                  <li data-value="Sri Lanka">Sri Lanka</li>
+                  <li data-value="Egypt">Egypt</li>
+                  <li data-value="Indonesia">Indonesia</li>
+                  <li data-value="Malaysia">Malaysia</li>
+                  <li data-value="United Arab Emirates">United Arab Emirates</li>
+                  <li data-value="Qatar">Qatar</li>
+                  <li data-value="Kuwait">Kuwait</li>
+                  <li data-value="Bahrain">Bahrain</li>
+                  <li data-value="Oman">Oman</li>
+                  <li data-value="Sudan">Sudan</li>
+                  <li data-value="Yemen">Yemen</li>
+                  <li data-value="Jordan">Jordan</li>
+                  <li data-value="Lebanon">Lebanon</li>
+                  <li data-value="Nepal">Nepal</li>
+                  <li data-value="United Kingdom">United Kingdom</li>
+                  <li data-value="United States">United States</li>
+                  <li data-value="Canada">Canada</li>
+                  <li data-value="Australia">Australia</li>
+                  <li data-value="China">China</li>
+                  <li data-value="Japan">Japan</li>
+                  <li data-value="South Korea">South Korea</li>
+                  <li data-value="Thailand">Thailand</li>
+                  <li data-value="Vietnam">Vietnam</li>
+                  <li data-value="Singapore">Singapore</li>
+                  <li data-value="Turkey">Turkey</li>
+                  <li data-value="Germany">Germany</li>
+                  <li data-value="France">France</li>
+                  <li data-value="Italy">Italy</li>
+                  <li data-value="Spain">Spain</li>
+                  <li data-value="Netherlands">Netherlands</li>
+                  <li data-value="Sweden">Sweden</li>
+                  <li data-value="Switzerland">Switzerland</li>
+                  <li data-value="South Africa">South Africa</li>
+                  <li data-value="Nigeria">Nigeria</li>
+                  <li data-value="Kenya">Kenya</li>
+                  <li data-value="Morocco">Morocco</li>
+                  <li data-value="Tunisia">Tunisia</li>
+                  <li data-value="Algeria">Algeria</li>
+                  <li data-value="Brazil">Brazil</li>
+                  <li data-value="Argentina">Argentina</li>
+                  <li data-value="Afghanistan">Afghanistan</li>
+                  <li data-value="Iran">Iran</li>
+                  <li data-value="Iraq">Iraq</li>
+                  <li data-value="Syria">Syria</li>
+                  <li data-value="Palestine">Palestine</li>
+                </ul>
+              </div>
+              <span class="error-text" id="partnerNationalityError">Partner Nationality is required</span>
+            </div>
+          </div>
+
+          <!-- General Error Alert -->
+          <div id="generalError" class="alert-banner hidden">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span id="errorMessage">Unable to connect. Please check your internet connection and try again.</span>
+          </div>
+
+          <!-- Step 2 Actions -->
+          <div class="step-actions">
+            <button type="button" id="prevStepBtn" class="back-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round" style="width: 16px; height: 16px; margin-right: 4px;">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              <span>Back</span>
+            </button>
+            <button type="submit" id="submitBtn" class="submit-btn" style="flex: 1;">
+              <span class="btn-text">Submit Tournament Entry</span>
+              <div class="spinner hidden"></div>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Success Panel -->
+    <div id="successPanel" class="panel">
+      <div class="success-illustration">
+        <div class="success-circle">
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      </div>
+      <h2>Registration Confirmed!</h2>
+      <p class="success-message">Thank you for registering. Your entry for the <strong>Navodaya Open 2026 International
+          Badminton Tournament</strong> has been successfully recorded.
+      </p>
+
+      <!-- Dynamic Auto-Generated Team & Player IDs Box -->
+      <div id="successPlayerCards" class="success-player-cards hidden">
+        <!-- Team ID Highlight Banner -->
+        <div class="success-team-banner">
+          <div class="team-banner-left">
+            <span class="team-banner-tag">OFFICIAL TEAM ID</span>
+            <div class="team-banner-val" id="successTeamId">T----</div>
+          </div>
+          <div class="team-banner-right">
+            <span class="team-category-flight" id="successCategoryFlight">-</span>
+          </div>
+        </div>
+
+        <div class="success-card main-player-card">
+          <span class="player-card-role">Main Participant</span>
+          <div class="player-card-name" id="successMainName">-</div>
+          <div class="player-card-badge">
+            <span class="badge-label">Player ID</span>
+            <span class="badge-val" id="successMainId">#----</span>
+          </div>
+        </div>
+        <div class="success-card partner-card hidden" id="successPartnerCard">
+          <span class="player-card-role">Co-Participant</span>
+          <div class="player-card-name" id="successPartnerName">-</div>
+          <div class="player-card-badge">
+            <span class="badge-label">Player ID</span>
+            <span class="badge-val" id="successPartnerId">#----</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="resetBtn" class="reset-btn">Register Another Player</button>
+    </div>
+
+    <!-- Footer Inside Outer Container -->
+    <footer class="footer">Powered by Sikha</footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+
+</html>
