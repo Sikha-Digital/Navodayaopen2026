@@ -1,9 +1,11 @@
 {
-  "version": 2,
+  "outputDirectory": ".",
+  "cleanUrls": false,
+  "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     }
   ]
 }
