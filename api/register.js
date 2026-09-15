@@ -355,13 +355,19 @@ module.exports = async function handler(req, res) {
       partnerPlayerId: partnerPlayerUid
     };
 
-    sendRegistrationConfirmationEmail(emailPayload).catch(emailErr => {
-      console.error('[Async Mailer Warning]', emailErr.message);
-    });
+    // Send confirmation email (awaited so serverless execution completes email sending)
+    let emailStatus = { success: false };
+    try {
+      emailStatus = await sendRegistrationConfirmationEmail(emailPayload);
+      console.log('[Registration Confirmation Email Status]', emailStatus);
+    } catch (emailErr) {
+      console.error('[Registration Mailer Error]', emailErr.message);
+    }
 
     return res.status(200).json({
       status: 'success',
       message: 'Tournament entry saved successfully.',
+      emailSent: emailStatus.success,
       timestamp: savedEntry.timestamp,
       insertedId: savedEntry.id,
       teamId: savedEntry.team_id || teamId,
