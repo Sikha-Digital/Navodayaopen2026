@@ -1432,3 +1432,27 @@ h2 {
   background: #c084fc;
   color: #3b0764;
 }
+
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #94a3b8);
+  letter-spacing: 0.04em;
+  padding-bottom: 8px;
+}
+
+.brand-sikha {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.brand-sikha .brand-s {
+  color: #ef4444;
+  font-weight: 800;
+}
+
+.brand-sikha .brand-rest {
+  color: #ffffff;
+}
+

@@ -407,7 +407,7 @@ function generateConfirmationEmailHtml(reg) {
             &#128172; Chat on WhatsApp
           </a>
         </div>
-        <p style="margin: 14px 0 0; font-size: 11px; color: #64748b; letter-spacing: 0.05em; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;">Powered by Sikha</p>
+        <p style="margin: 14px 0 0; font-size: 11px; color: #94a3b8; letter-spacing: 0.05em; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;">Powered by <span style="font-weight: 700;"><span style="color: #ef4444; font-weight: 800;">S</span><span style="color: #ffffff;">ikha</span></span></p>
       </div>
 
     </div>
