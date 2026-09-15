@@ -6,7 +6,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { query, initDatabase } = require('./db');
+const crypto = require('crypto');
+const { query, initDatabase, hashPassword, verifyPassword } = require('./db');
 const { sendRegistrationConfirmationEmail, verifySmtpConnection, generateConfirmationEmailHtml } = require('./mailer');
 
 const app = express();
@@ -20,6 +21,27 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static frontend files (exact UI preservation)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
+
+// In-Memory Active Admin Session Store (token -> { user, expiresAt })
+const activeAdminSessions = new Map();
+
+function createAdminSession(user) {
+  const token = 'sess_' + crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours duration
+  activeAdminSessions.set(token, { user, expiresAt });
+  return token;
+}
+
+function getSessionUser(token) {
+  if (!token) return null;
+  const sess = activeAdminSessions.get(token);
+  if (!sess) return null;
+  if (Date.now() > sess.expiresAt) {
+    activeAdminSessions.delete(token);
+    return null;
+  }
+  return sess.user;
+}
 
 /**
  * Health Check Endpoint
@@ -600,28 +622,138 @@ app.get('/admin', (req, res) => {
 /**
  * Admin Authentication Helper Middleware
  */
-function requireAdminAuth(req, res, next) {
-  const adminKey = req.headers['x-admin-key'] || req.query.key;
-  const configuredKey = process.env.ADMIN_KEY;
+async function requireAdminAuth(req, res, next) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : (req.headers['x-admin-key'] || req.query.key);
 
-  if (configuredKey && adminKey !== configuredKey) {
-    return res.status(401).json({ status: 'error', message: 'Unauthorized access. Invalid or missing Admin Key.' });
+  const configuredKey = process.env.ADMIN_KEY || 'navodaya_admin_secret_2026';
+
+  let user = getSessionUser(token);
+
+  if (!user && token) {
+    if (token === configuredKey) {
+      user = {
+        id: 0,
+        username: 'admin',
+        email: 'admin@navodaya.com',
+        role: 'admin',
+        permissions: ['can_view', 'can_edit', 'can_delete', 'can_export', 'can_manage_users']
+      };
+    }
   }
+
+  if (!user) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized access. Invalid or expired session token.' });
+  }
+
+  req.user = user;
   next();
 }
 
 /**
- * Admin Key Verification Login Endpoint
+ * Permission Enforcement Middleware
+ */
+function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized access.' });
+    }
+    const perms = req.user.permissions || [];
+    if (req.user.role === 'admin' || perms.includes(permission)) {
+      return next();
+    }
+    return res.status(403).json({
+      status: 'error',
+      message: `Access denied. Permission "${permission}" is required for this action.`
+    });
+  };
+}
+
+/**
+ * Admin Login Endpoint (Supports Username/Password & Secret Key)
  * POST /api/admin/login
  */
-app.post('/api/admin/login', (req, res) => {
-  const key = (req.body && req.body.key) || req.headers['x-admin-key'] || req.query.key;
-  const configuredKey = process.env.ADMIN_KEY;
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, login, password, key } = req.body || {};
+    const identity = (username || login || '').trim();
+    const pass = password ? String(password).trim() : '';
+    const configuredKey = process.env.ADMIN_KEY || 'navodaya_admin_secret_2026';
 
-  if (configuredKey && key !== configuredKey) {
-    return res.status(401).json({ status: 'error', message: 'Invalid Admin Security Key.' });
+    // 1. Password Login via admin_users table
+    if (identity && pass) {
+      const userRes = await query(
+        `SELECT * FROM admin_users 
+         WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)) AND is_active = TRUE 
+         LIMIT 1`,
+        [identity]
+      );
+
+      if (userRes.rows.length > 0) {
+        const dbUser = userRes.rows[0];
+        const match = verifyPassword(pass, dbUser.password_hash);
+        if (match) {
+          await query('UPDATE admin_users SET last_login = NOW() WHERE id = $1', [dbUser.id]);
+
+          let perms = dbUser.permissions;
+          if (typeof perms === 'string') {
+            try { perms = JSON.parse(perms); } catch (e) { perms = ['can_view']; }
+          }
+          if (dbUser.role === 'admin') {
+            perms = ['can_view', 'can_edit', 'can_delete', 'can_export', 'can_manage_users'];
+          }
+
+          const userProfile = {
+            id: dbUser.id,
+            username: dbUser.username,
+            email: dbUser.email,
+            role: dbUser.role,
+            permissions: perms
+          };
+
+          const token = createAdminSession(userProfile);
+
+          return res.json({
+            status: 'success',
+            message: 'Authenticated successfully',
+            authenticated: true,
+            token: token,
+            user: userProfile
+          });
+        }
+      }
+
+      return res.status(401).json({ status: 'error', message: 'Invalid username or password.' });
+    }
+
+    // 2. Secret Key Fallback
+    const passedKey = key || req.headers['x-admin-key'] || req.query.key;
+    if (passedKey === configuredKey) {
+      const adminProfile = {
+        id: 0,
+        username: 'admin',
+        email: 'admin@navodaya.com',
+        role: 'admin',
+        permissions: ['can_view', 'can_edit', 'can_delete', 'can_export', 'can_manage_users']
+      };
+      const token = createAdminSession(adminProfile);
+      return res.json({
+        status: 'success',
+        message: 'Authenticated successfully',
+        authenticated: true,
+        token: token,
+        user: adminProfile
+      });
+    }
+
+    return res.status(401).json({ status: 'error', message: 'Please provide a valid username and password.' });
+
+  } catch (err) {
+    console.error('[Admin Login Error]', err);
+    return res.status(500).json({ status: 'error', message: 'Login error: ' + err.message });
   }
-  res.json({ status: 'success', message: 'Authenticated successfully', authenticated: true });
 });
 
 /**
@@ -727,7 +859,7 @@ app.get('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
  * Update registration entry details
  * PUT /api/admin/registrations/:id
  */
-app.put('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
+app.put('/api/admin/registrations/:id', requireAdminAuth, requirePermission('can_edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const d = req.body || {};
@@ -782,7 +914,7 @@ app.put('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
  * Delete individual registration
  * DELETE /api/admin/registrations/:id
  */
-app.delete('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
+app.delete('/api/admin/registrations/:id', requireAdminAuth, requirePermission('can_delete'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query('DELETE FROM registrations WHERE id = $1 RETURNING id, team_id, name', [id]);
@@ -803,7 +935,7 @@ app.delete('/api/admin/registrations/:id', requireAdminAuth, async (req, res) =>
  * Export all registrations as CSV file
  * GET /api/admin/export-csv
  */
-app.get('/api/admin/export-csv', requireAdminAuth, async (req, res) => {
+app.get('/api/admin/export-csv', requireAdminAuth, requirePermission('can_export'), async (req, res) => {
   try {
     const result = await query('SELECT * FROM registrations ORDER BY id ASC');
     const rows = result.rows;
@@ -841,10 +973,154 @@ app.get('/api/admin/export-csv', requireAdminAuth, async (req, res) => {
 });
 
 /**
+ * User Management APIs (Super Admin / can_manage_users)
+ */
+
+// List all system users
+app.get('/api/admin/users', requireAdminAuth, requirePermission('can_manage_users'), async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT id, username, email, role, permissions, is_active, created_at, last_login FROM admin_users ORDER BY id ASC'
+    );
+    res.json({
+      status: 'success',
+      count: result.rows.length,
+      data: result.rows
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Create a new user
+app.post('/api/admin/users', requireAdminAuth, requirePermission('can_manage_users'), async (req, res) => {
+  try {
+    const { username, email, password, role, permissions } = req.body || {};
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ status: 'error', message: 'Username, email, and password are required.' });
+    }
+
+    let userRole = (role || 'manager').toLowerCase();
+    let userPerms = Array.isArray(permissions) ? permissions : ['can_view'];
+
+    if (userRole === 'admin') {
+      userPerms = ['can_view', 'can_edit', 'can_delete', 'can_export', 'can_manage_users'];
+    } else if (userRole === 'manager' && (!permissions || permissions.length === 0)) {
+      userPerms = ['can_view', 'can_edit', 'can_export'];
+    } else if (userRole === 'viewer' && (!permissions || permissions.length === 0)) {
+      userPerms = ['can_view'];
+    }
+
+    const passHash = hashPassword(password);
+
+    const result = await query(
+      `INSERT INTO admin_users (username, email, password_hash, role, permissions, is_active)
+       VALUES ($1, $2, $3, $4, $5, TRUE)
+       RETURNING id, username, email, role, permissions, is_active, created_at`,
+      [username.trim(), email.trim().toLowerCase(), passHash, userRole, JSON.stringify(userPerms)]
+    );
+
+    res.json({
+      status: 'success',
+      message: `User "${username}" created successfully as ${userRole}`,
+      data: result.rows[0]
+    });
+  } catch (err) {
+    if (err.message.includes('unique constraint') || err.message.includes('duplicate key')) {
+      return res.status(400).json({ status: 'error', message: 'Username or email already exists.' });
+    }
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Edit user role, permissions, or active status
+app.put('/api/admin/users/:id', requireAdminAuth, requirePermission('can_manage_users'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, role, permissions, is_active } = req.body || {};
+
+    const check = await query('SELECT id FROM admin_users WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    let userRole = role ? role.toLowerCase() : undefined;
+    let userPerms = Array.isArray(permissions) ? JSON.stringify(permissions) : undefined;
+
+    const result = await query(
+      `UPDATE admin_users SET
+        username = COALESCE($1, username),
+        email = COALESCE($2, email),
+        role = COALESCE($3, role),
+        permissions = COALESCE($4, permissions),
+        is_active = COALESCE($5, is_active)
+       WHERE id = $6
+       RETURNING id, username, email, role, permissions, is_active, created_at, last_login`,
+      [username ? username.trim() : null, email ? email.trim().toLowerCase() : null, userRole || null, userPerms || null, is_active !== undefined ? is_active : null, id]
+    );
+
+    res.json({
+      status: 'success',
+      message: 'User updated successfully',
+      data: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Reset user password
+app.put('/api/admin/users/:id/password', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body || {};
+
+    if (String(req.user.id) !== String(id) && req.user.role !== 'admin' && !(req.user.permissions || []).includes('can_manage_users')) {
+      return res.status(403).json({ status: 'error', message: 'Permission denied.' });
+    }
+
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ status: 'error', message: 'Password must be at least 4 characters long.' });
+    }
+
+    const passHash = hashPassword(newPassword);
+    await query('UPDATE admin_users SET password_hash = $1 WHERE id = $2', [passHash, id]);
+
+    res.json({ status: 'success', message: 'Password reset successfully.' });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Delete user account
+app.delete('/api/admin/users/:id', requireAdminAuth, requirePermission('can_manage_users'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (String(req.user.id) === String(id)) {
+      return res.status(400).json({ status: 'error', message: 'You cannot delete your own logged-in admin account.' });
+    }
+
+    const result = await query('DELETE FROM admin_users WHERE id = $1 RETURNING id, username', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    res.json({
+      status: 'success',
+      message: `User "${result.rows[0].username}" deleted successfully.`
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+/**
  * Clear all registrations and players tables (Admin protected)
  * DELETE /api/registrations
  */
-app.delete('/api/registrations', requireAdminAuth, async (req, res) => {
+app.delete('/api/registrations', requireAdminAuth, requirePermission('can_delete'), async (req, res) => {
   try {
     await query('TRUNCATE TABLE registrations, players RESTART IDENTITY CASCADE;');
     res.json({

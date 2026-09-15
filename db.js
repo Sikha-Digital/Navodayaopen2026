@@ -48,8 +48,29 @@ async function query(text, params) {
   }
 }
 
+const crypto = require('crypto');
+
 /**
- * Automatically create tables and seed initial tournament categories & levels
+ * Hash password using PBKDF2 with random salt
+ */
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+/**
+ * Verify password against stored salt:hash
+ */
+function verifyPassword(password, storedHash) {
+  if (!storedHash || !storedHash.includes(':')) return false;
+  const [salt, originalHash] = storedHash.split(':');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(originalHash, 'hex'));
+}
+
+/**
+ * Automatically create tables and seed initial tournament categories, levels & admin users
  */
 async function initDatabase() {
   console.log('[DB Init] Checking and initializing database schema...');
@@ -110,7 +131,23 @@ async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_players_norm_iqama ON players (UPPER(REPLACE(REPLACE(REPLACE(iqama, ' ', ''), '-', ''), '_', '')));
     CREATE INDEX IF NOT EXISTS idx_players_uid ON players (player_uid);
 
-    -- 5. Registrations Table
+    -- 5. Admin Users Table (Role-Based Access Control)
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(100) NOT NULL UNIQUE,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(50) NOT NULL DEFAULT 'manager',
+      permissions JSONB DEFAULT '["can_view"]'::jsonb,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      last_login TIMESTAMP WITH TIME ZONE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users (username);
+    CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users (email);
+
+    -- 6. Registrations Table
     CREATE TABLE IF NOT EXISTS registrations (
       id SERIAL PRIMARY KEY,
       timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -242,7 +279,22 @@ async function initDatabase() {
 
   try {
     await query(schemaSql);
-    console.log('[DB Init] Database schema initialized successfully (Categories, Levels, Registrations).');
+
+    // Seed default Super Admin user if no users exist
+    const adminCheck = await query('SELECT id FROM admin_users LIMIT 1');
+    if (adminCheck.rows.length === 0) {
+      const defaultPass = process.env.ADMIN_PASSWORD || 'adminpassword2026';
+      const passHash = hashPassword(defaultPass);
+      const allPerms = JSON.stringify(['can_view', 'can_edit', 'can_delete', 'can_export', 'can_manage_users']);
+      await query(
+        `INSERT INTO admin_users (username, email, password_hash, role, permissions, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['admin', 'admin@navodaya.com', passHash, 'admin', allPerms, true]
+      );
+      console.log('[DB Init] Default Super Admin user created (Username: admin, Password: ' + defaultPass + ')');
+    }
+
+    console.log('[DB Init] Database schema initialized successfully (Categories, Levels, Admin Users, Registrations).');
   } catch (err) {
     console.error('[DB Init Error] Failed to initialize schema:', err.message);
     throw err;
@@ -265,5 +317,7 @@ if (require.main === module) {
 module.exports = {
   pool,
   query,
-  initDatabase
+  initDatabase,
+  hashPassword,
+  verifyPassword
 };

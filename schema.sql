@@ -58,6 +58,22 @@ CREATE INDEX IF NOT EXISTS idx_players_iqama ON players (iqama);
 CREATE INDEX IF NOT EXISTS idx_players_norm_iqama ON players (UPPER(REPLACE(REPLACE(REPLACE(iqama, ' ', ''), '-', ''), '_', '')));
 CREATE INDEX IF NOT EXISTS idx_players_uid ON players (player_uid);
 
+-- 6. Admin Users Table (Role-Based Access Control)
+CREATE TABLE IF NOT EXISTS admin_users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'manager', -- 'admin', 'manager', 'viewer'
+  permissions JSONB DEFAULT '["can_view"]'::jsonb,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_login TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users (username);
+CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users (email);
+
 -- 5. Registrations Table
 CREATE TABLE IF NOT EXISTS registrations (
   id SERIAL PRIMARY KEY,

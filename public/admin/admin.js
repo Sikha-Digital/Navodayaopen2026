@@ -1,25 +1,37 @@
 /**
- * Navodaya Open 2026 - Admin Portal Client Logic
+ * Navodaya Open 2026 - Admin Portal Client Logic (Multi-User & RBAC)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Storage Key Name
-  const STORAGE_ADMIN_KEY = 'navodaya_admin_key';
+  // Storage Keys
+  const STORAGE_AUTH_TOKEN = 'navodaya_admin_token';
+  const STORAGE_USER_PROFILE = 'navodaya_admin_user';
   
   // State
-  let currentAdminKey = localStorage.getItem(STORAGE_ADMIN_KEY) || sessionStorage.getItem(STORAGE_ADMIN_KEY) || '';
+  let currentToken = localStorage.getItem(STORAGE_AUTH_TOKEN) || sessionStorage.getItem(STORAGE_AUTH_TOKEN) || '';
+  let currentUser = JSON.parse(localStorage.getItem(STORAGE_USER_PROFILE) || sessionStorage.getItem(STORAGE_USER_PROFILE) || 'null');
+  
   let allRegistrations = [];
+  let allUsers = [];
   let tournamentConfig = { categories: [], levels: [], categoryLevelMap: {} };
   let pendingDeleteId = null;
 
-  // DOM Elements
+  // DOM Elements - Auth Modal
   const authModal = document.getElementById('auth-modal');
   const authForm = document.getElementById('auth-form');
-  const adminKeyInput = document.getElementById('admin-key-input');
+  const adminUsernameInput = document.getElementById('admin-username-input');
+  const adminPasswordInput = document.getElementById('admin-password-input');
   const togglePasswordBtn = document.getElementById('toggle-password-btn');
   const authErrorMsg = document.getElementById('auth-error-msg');
   
+  // DOM Elements - Dashboard Nav
   const dashboardApp = document.getElementById('dashboard-app');
+  const userProfileBadge = document.getElementById('user-profile-badge');
+  const userAvatarText = document.getElementById('user-avatar-text');
+  const userDisplayName = document.getElementById('user-display-name');
+  const userRoleChip = document.getElementById('user-role-chip');
+  const usersMgmtBtn = document.getElementById('users-mgmt-btn');
+
   const refreshBtn = document.getElementById('refresh-btn');
   const exportCsvBtn = document.getElementById('export-csv-btn');
   const logoutBtn = document.getElementById('logout-btn');
@@ -55,33 +67,67 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
   const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
+  // User Management Modal Elements
+  const usersModal = document.getElementById('users-modal');
+  const closeUsersModalBtn = document.getElementById('close-users-modal-btn');
+  const createUserBtn = document.getElementById('create-user-btn');
+  const usersTbody = document.getElementById('users-tbody');
+
+  // User Form Dialog Elements
+  const userFormModal = document.getElementById('user-form-modal');
+  const userForm = document.getElementById('user-form');
+  const closeUserFormModalBtn = document.getElementById('close-user-form-modal-btn');
+  const cancelUserFormBtn = document.getElementById('cancel-user-form-btn');
+  const userFormId = document.getElementById('user-form-id');
+  const uUsername = document.getElementById('u-username');
+  const uEmail = document.getElementById('u-email');
+  const uPassword = document.getElementById('u-password');
+  const uPasswordGroup = document.getElementById('u-password-group');
+  const uRole = document.getElementById('u-role');
+
+  // Password Reset Modal Elements
+  const resetPasswordModal = document.getElementById('reset-password-modal');
+  const resetPasswordForm = document.getElementById('reset-password-form');
+  const closeResetPasswordModalBtn = document.getElementById('close-reset-password-modal-btn');
+  const cancelResetPasswordBtn = document.getElementById('cancel-reset-password-btn');
+  const resetTargetUserId = document.getElementById('reset-target-user-id');
+  const resetTargetUsername = document.getElementById('reset-target-username');
+  const resetNewPassword = document.getElementById('reset-new-password');
+
   // 1. Initial Authentication Check
-  if (currentAdminKey) {
-    verifyKeyAndInitialize(currentAdminKey);
+  if (currentToken && currentUser) {
+    applyUserProfile(currentUser);
+    hideAuthModal();
+    loadTournamentConfig();
+    loadDashboardData();
   } else {
     showAuthModal();
   }
 
   // Toggle Password Visibility
   togglePasswordBtn.addEventListener('click', () => {
-    const isPass = adminKeyInput.type === 'password';
-    adminKeyInput.type = isPass ? 'text' : 'password';
+    const isPass = adminPasswordInput.type === 'password';
+    adminPasswordInput.type = isPass ? 'text' : 'password';
     togglePasswordBtn.innerHTML = isPass ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
   });
 
   // Auth Form Submit
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const keyVal = adminKeyInput.value.trim();
-    if (!keyVal) return;
-    await verifyKeyAndInitialize(keyVal);
+    const username = adminUsernameInput.value.trim();
+    const password = adminPasswordInput.value.trim();
+    if (!username || !password) return;
+    await performLogin(username, password);
   });
 
   // Logout Handler
   logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem(STORAGE_ADMIN_KEY);
-    sessionStorage.removeItem(STORAGE_ADMIN_KEY);
-    currentAdminKey = '';
+    localStorage.removeItem(STORAGE_AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_USER_PROFILE);
+    sessionStorage.removeItem(STORAGE_AUTH_TOKEN);
+    sessionStorage.removeItem(STORAGE_USER_PROFILE);
+    currentToken = '';
+    currentUser = null;
     showAuthModal();
     showToast('Logged out successfully', 'success');
   });
@@ -96,9 +142,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Export CSV Button
   exportCsvBtn.addEventListener('click', () => {
-    const downloadUrl = `/api/admin/export-csv?key=${encodeURIComponent(currentAdminKey)}`;
+    if (!hasPermission('can_export')) {
+      showToast('You do not have permission to export CSV files.', 'error');
+      return;
+    }
+    const downloadUrl = `/api/admin/export-csv?key=${encodeURIComponent(currentToken)}`;
     window.open(downloadUrl, '_blank');
   });
+
+  // User Management Button
+  usersMgmtBtn.addEventListener('click', () => {
+    if (!hasPermission('can_manage_users')) {
+      showToast('Permission denied.', 'error');
+      return;
+    }
+    fetchUsers();
+    usersModal.classList.remove('hidden');
+  });
+
+  closeUsersModalBtn.addEventListener('click', () => usersModal.classList.add('hidden'));
 
   // Search & Filter Listeners
   searchInput.addEventListener('input', () => {
@@ -119,36 +181,68 @@ document.addEventListener('DOMContentLoaded', () => {
   filterCategory.addEventListener('change', () => fetchRegistrations());
   filterFlight.addEventListener('change', () => fetchRegistrations());
 
-  // 2. Authentication Verification Function
-  async function verifyKeyAndInitialize(key) {
+  // Helper: Check if user has permission
+  function hasPermission(perm) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    const perms = currentUser.permissions || [];
+    return perms.includes(perm);
+  }
+
+  // 2. Perform Login API Call
+  async function performLogin(username, password) {
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-key': key
-        },
-        body: JSON.stringify({ key })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
       });
 
       const data = await res.json();
 
       if (res.ok && data.authenticated) {
-        currentAdminKey = key;
-        localStorage.setItem(STORAGE_ADMIN_KEY, key);
+        currentToken = data.token;
+        currentUser = data.user;
+        localStorage.setItem(STORAGE_AUTH_TOKEN, data.token);
+        localStorage.setItem(STORAGE_USER_PROFILE, JSON.stringify(data.user));
+
+        applyUserProfile(data.user);
         hideAuthModal();
         await loadTournamentConfig();
         await loadDashboardData();
+        showToast(`Welcome back, ${data.user.username}!`, 'success');
       } else {
-        authErrorMsg.textContent = data.message || 'Invalid passcode or admin key.';
+        authErrorMsg.textContent = data.message || 'Invalid username or password.';
         authErrorMsg.classList.remove('hidden');
-        showAuthModal();
       }
     } catch (err) {
-      console.error('[Admin Auth Error]', err);
+      console.error('[Admin Login Error]', err);
       authErrorMsg.textContent = 'Server connection error. Please try again.';
       authErrorMsg.classList.remove('hidden');
-      showAuthModal();
+    }
+  }
+
+  function applyUserProfile(user) {
+    if (!user) return;
+    const name = user.username || 'Admin';
+    userDisplayName.textContent = name;
+    userAvatarText.textContent = name.charAt(0).toUpperCase();
+    
+    const roleStr = (user.role || 'manager').toUpperCase();
+    userRoleChip.textContent = roleStr;
+    userRoleChip.className = `role-chip role-badge-${(user.role || 'manager').toLowerCase()}`;
+
+    // Permissions UI Toggles
+    if (hasPermission('can_manage_users')) {
+      usersMgmtBtn.classList.remove('hidden');
+    } else {
+      usersMgmtBtn.classList.add('hidden');
+    }
+
+    if (hasPermission('can_export')) {
+      exportCsvBtn.classList.remove('hidden');
+    } else {
+      exportCsvBtn.classList.add('hidden');
     }
   }
 
@@ -178,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function populateDropdowns() {
-    // Populate Category filter & edit options
     const catOptions = ['<option value="All">All Categories</option>'];
     const editCatOptions = ['<option value="">Select Category</option>'];
     
@@ -191,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
     filterCategory.innerHTML = catOptions.join('');
     editCategory.innerHTML = editCatOptions.join('');
 
-    // Populate Flight filter options
     const flightOptions = ['<option value="All">All Flights / Levels</option>'];
     const editFlightOptions = ['<option value="">Select Level</option>'];
     if (tournamentConfig.levels) {
@@ -204,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
     editFlight.innerHTML = editFlightOptions.join('');
   }
 
-  // Dependent Flight Dropdown when Category changes in Edit Modal
   editCategory.addEventListener('change', () => {
     const selectedCat = editCategory.value;
     const allowedLevels = tournamentConfig.categoryLevelMap[selectedCat] || [];
@@ -232,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchStats() {
     try {
       const res = await fetch('/api/admin/stats', {
-        headers: { 'x-admin-key': currentAdminKey }
+        headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       const data = await res.json();
       if (res.ok && data.status === 'success') {
@@ -242,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
         statDoublesCount.textContent = s.doublesCount;
         statSinglesCount.textContent = s.singlesCount;
 
-        // Render Category Chips
         if (s.byCategory && s.byCategory.length > 0) {
           categoryBadgesContainer.innerHTML = s.byCategory.map(c => `
             <div class="cat-chip">
@@ -271,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (flightVal && flightVal !== 'All') params.append('flight', flightVal);
 
       const res = await fetch(`/api/admin/registrations?${params.toString()}`, {
-        headers: { 'x-admin-key': currentAdminKey }
+        headers: { 'Authorization': `Bearer ${currentToken}` }
       });
 
       const data = await res.json();
@@ -303,6 +393,9 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       return;
     }
+
+    const canEdit = hasPermission('can_edit');
+    const canDelete = hasPermission('can_delete');
 
     registrationsTbody.innerHTML = list.map(reg => {
       const teamIdStr = reg.team_id ? escapeHtml(reg.team_id) : `REG-${reg.id}`;
@@ -350,12 +443,17 @@ document.addEventListener('DOMContentLoaded', () => {
           </td>
           <td class="text-right">
             <div class="action-btn-group">
-              <button class="action-btn action-btn-edit" onclick="openEditModal(${reg.id})" title="Edit Registration">
-                <i class="fa-solid fa-pen-to-square"></i>
-              </button>
-              <button class="action-btn action-btn-delete" onclick="openDeleteModal(${reg.id}, '${escapeHtml(reg.name)}', '${teamIdStr}')" title="Delete Registration">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
+              ${canEdit ? `
+                <button class="action-btn action-btn-edit" onclick="openEditModal(${reg.id})" title="Edit Registration">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+              ` : ''}
+              ${canDelete ? `
+                <button class="action-btn action-btn-delete" onclick="openDeleteModal(${reg.id}, '${escapeHtml(reg.name)}', '${teamIdStr}')" title="Delete Registration">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : ''}
+              ${!canEdit && !canDelete ? `<span class="text-muted text-sm">Read Only</span>` : ''}
             </div>
           </td>
         </tr>
@@ -365,13 +463,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 6. Edit Registration Modal Handlers
   window.openEditModal = (id) => {
+    if (!hasPermission('can_edit')) {
+      showToast('Permission denied. You cannot edit records.', 'error');
+      return;
+    }
     const reg = allRegistrations.find(r => r.id === id);
     if (!reg) return;
 
     editRegId.value = reg.id;
     document.getElementById('modal-subtitle').textContent = `Team ID: ${reg.team_id || ('REG-' + reg.id)}`;
 
-    // Main Player
     document.getElementById('edit-player-id').value = reg.player_id || 'Auto-generated';
     document.getElementById('edit-name').value = reg.name || '';
     document.getElementById('edit-iqama').value = reg.iqama || '';
@@ -382,14 +483,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-dob').value = reg.dob || '';
     document.getElementById('edit-nationality').value = reg.nationality || '';
 
-    // Category & Flight
     editCategory.value = reg.category || '';
     editCategory.dispatchEvent(new Event('change'));
     setTimeout(() => {
       editFlight.value = reg.flight || '';
     }, 50);
 
-    // Partner
     document.getElementById('edit-partner-player-id').value = reg.partner_player_id || '--';
     document.getElementById('edit-partner-name').value = reg.partner_name || '';
     document.getElementById('edit-partner-iqama').value = reg.partner_iqama || '';
@@ -431,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': currentAdminKey
+          'Authorization': `Bearer ${currentToken}`
         },
         body: JSON.stringify(payload)
       });
@@ -449,8 +548,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 7. Delete Modal Handlers
+  // 7. Delete Registration Handlers
   window.openDeleteModal = (id, name, teamId) => {
+    if (!hasPermission('can_delete')) {
+      showToast('Permission denied. You cannot delete records.', 'error');
+      return;
+    }
     pendingDeleteId = id;
     deleteTargetInfo.textContent = `${name} (${teamId})`;
     deleteModal.classList.remove('hidden');
@@ -464,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch(`/api/admin/registrations/${pendingDeleteId}`, {
         method: 'DELETE',
-        headers: { 'x-admin-key': currentAdminKey }
+        headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       const data = await res.json();
 
@@ -482,7 +585,223 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 8. Toast Helper
+  // 8. User Management Functions
+  async function fetchUsers() {
+    try {
+      const res = await fetch('/api/admin/users', {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        allUsers = data.data || [];
+        renderUsersTable(allUsers);
+      } else {
+        usersTbody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">Failed to load users: ${escapeHtml(data.message)}</td></tr>`;
+      }
+    } catch (err) {
+      console.error('[Fetch Users Error]', err);
+      usersTbody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">Connection error fetching users.</td></tr>`;
+    }
+  }
+
+  function renderUsersTable(users) {
+    if (users.length === 0) {
+      usersTbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No users found.</td></tr>';
+      return;
+    }
+
+    usersTbody.innerHTML = users.map(u => {
+      const roleBadgeClass = `role-badge-${(u.role || 'manager').toLowerCase()}`;
+      let permsList = u.permissions;
+      if (typeof permsList === 'string') {
+        try { permsList = JSON.parse(permsList); } catch (e) { permsList = []; }
+      }
+      if (!Array.isArray(permsList)) permsList = [];
+
+      const permsPills = permsList.map(p => `<span class="perm-pill">${escapeHtml(p.replace('can_', ''))}</span>`).join('');
+
+      const lastLoginStr = u.last_login ? new Date(u.last_login).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) : 'Never';
+
+      return `
+        <tr>
+          <td>
+            <div class="player-info-cell">
+              <span class="player-name">${escapeHtml(u.username)}</span>
+              <span class="player-meta">${escapeHtml(u.email)}</span>
+            </div>
+          </td>
+          <td>
+            <span class="${roleBadgeClass}">${escapeHtml((u.role || 'manager').toUpperCase())}</span>
+          </td>
+          <td>
+            <div>${permsPills || '<span class="text-muted text-sm">Default</span>'}</div>
+          </td>
+          <td>
+            <span class="${u.is_active ? 'text-emerald' : 'text-danger'} font-weight-bold">
+              ${u.is_active ? '<i class="fa-solid fa-circle-check"></i> Active' : '<i class="fa-solid fa-circle-xmark"></i> Disabled'}
+            </span>
+          </td>
+          <td>
+            <span class="text-muted text-sm">${lastLoginStr}</span>
+          </td>
+          <td class="text-right">
+            <div class="action-btn-group">
+              <button class="action-btn action-btn-edit" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.username)}')" title="Reset Password">
+                <i class="fa-solid fa-key"></i>
+              </button>
+              ${u.id !== currentUser.id ? `
+                <button class="action-btn action-btn-delete" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')" title="Delete User">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Create User Modal Handlers
+  createUserBtn.addEventListener('click', () => {
+    userFormId.value = '';
+    uUsername.value = '';
+    uEmail.value = '';
+    uPassword.value = '';
+    uPasswordGroup.classList.remove('hidden');
+    uRole.value = 'manager';
+    uRole.dispatchEvent(new Event('change'));
+    userFormModal.classList.remove('hidden');
+  });
+
+  closeUserFormModalBtn.addEventListener('click', () => userFormModal.classList.add('hidden'));
+  cancelUserFormBtn.addEventListener('click', () => userFormModal.classList.add('hidden'));
+
+  uRole.addEventListener('change', () => {
+    const roleVal = uRole.value;
+    const canEdit = document.getElementById('perm-can_edit');
+    const canExport = document.getElementById('perm-can_export');
+    const canDelete = document.getElementById('perm-can_delete');
+    const canManageUsers = document.getElementById('perm-can_manage_users');
+
+    if (roleVal === 'admin') {
+      canEdit.checked = true;
+      canExport.checked = true;
+      canDelete.checked = true;
+      canManageUsers.checked = true;
+    } else if (roleVal === 'manager') {
+      canEdit.checked = true;
+      canExport.checked = true;
+      canDelete.checked = false;
+      canManageUsers.checked = false;
+    } else if (roleVal === 'viewer') {
+      canEdit.checked = false;
+      canExport.checked = false;
+      canDelete.checked = false;
+      canManageUsers.checked = false;
+    }
+  });
+
+  userForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = uUsername.value.trim();
+    const email = uEmail.value.trim();
+    const password = uPassword.value.trim();
+    const role = uRole.value;
+
+    const permissions = ['can_view'];
+    if (document.getElementById('perm-can_edit').checked) permissions.push('can_edit');
+    if (document.getElementById('perm-can_export').checked) permissions.push('can_export');
+    if (document.getElementById('perm-can_delete').checked) permissions.push('can_delete');
+    if (document.getElementById('perm-can_manage_users').checked) permissions.push('can_manage_users');
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ username, email, password, role, permissions })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        showToast(`User "${username}" created successfully`, 'success');
+        userFormModal.classList.add('hidden');
+        fetchUsers();
+      } else {
+        showToast(data.message || 'Failed to create user', 'error');
+      }
+    } catch (err) {
+      console.error('[Create User Error]', err);
+      showToast('Error creating user: ' + err.message, 'error');
+    }
+  });
+
+  // Password Reset Handlers
+  window.openResetPasswordModal = (id, username) => {
+    resetTargetUserId.value = id;
+    resetTargetUsername.textContent = username;
+    resetNewPassword.value = '';
+    resetPasswordModal.classList.remove('hidden');
+  };
+
+  closeResetPasswordModalBtn.addEventListener('click', () => resetPasswordModal.classList.add('hidden'));
+  cancelResetPasswordBtn.addEventListener('click', () => resetPasswordModal.classList.add('hidden'));
+
+  resetPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = resetTargetUserId.value;
+    const newPassword = resetNewPassword.value.trim();
+    if (!id || !newPassword) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${id}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ newPassword })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        showToast('Password reset successfully', 'success');
+        resetPasswordModal.classList.add('hidden');
+      } else {
+        showToast(data.message || 'Failed to reset password', 'error');
+      }
+    } catch (err) {
+      showToast('Error resetting password: ' + err.message, 'error');
+    }
+  });
+
+  // Delete User
+  window.deleteUser = async (id, username) => {
+    if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        showToast(`User "${username}" deleted successfully`, 'success');
+        fetchUsers();
+      } else {
+        showToast(data.message || 'Failed to delete user', 'error');
+      }
+    } catch (err) {
+      showToast('Error deleting user: ' + err.message, 'error');
+    }
+  };
+
+  // 9. Toast Helper
   function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -500,7 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3500);
   }
 
-  // 9. Utility Escape HTML
+  // 10. Utility Escape HTML
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str)

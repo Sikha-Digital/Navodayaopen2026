@@ -20,21 +20,28 @@
         <div class="auth-logo">
           <i class="fa-solid fa-shield-halved"></i>
         </div>
-        <h2>Admin Authentication</h2>
-        <p>Navodaya Open 2026 Badminton Tournament Management</p>
+        <h2>Admin Sign In</h2>
+        <p>Navodaya Open 2026 Badminton Tournament Portal</p>
       </div>
       <form id="auth-form" class="auth-form">
         <div class="form-group">
-          <label for="admin-key-input">Admin Passcode / API Key</label>
+          <label for="admin-username-input">Username or Email</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-user input-icon"></i>
+            <input type="text" id="admin-username-input" placeholder="Enter username or email..." required autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="admin-password-input">Password</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-lock input-icon"></i>
-            <input type="password" id="admin-key-input" placeholder="Enter your secret admin key..." required autocomplete="current-password">
+            <input type="password" id="admin-password-input" placeholder="Enter password..." required autocomplete="current-password">
             <button type="button" id="toggle-password-btn" class="icon-btn-ghost"><i class="fa-regular fa-eye"></i></button>
           </div>
         </div>
         <div id="auth-error-msg" class="auth-error hidden"></div>
         <button type="submit" id="auth-submit-btn" class="btn btn-primary btn-full">
-          <span>Authenticate & Access Dashboard</span>
+          <span>Sign In to Dashboard</span>
           <i class="fa-solid fa-arrow-right"></i>
         </button>
       </form>
@@ -57,9 +64,22 @@
       </div>
 
       <div class="nav-actions">
+        <!-- Logged In User Profile -->
+        <div class="user-badge" id="user-profile-badge">
+          <div class="user-avatar" id="user-avatar-text">A</div>
+          <div class="user-info">
+            <span class="user-name" id="user-display-name">Admin</span>
+            <span class="role-chip" id="user-role-chip">ADMIN</span>
+          </div>
+        </div>
+
+        <button id="users-mgmt-btn" class="btn btn-warning hidden" title="Manage Users & Permissions">
+          <i class="fa-solid fa-users-gear"></i>
+          <span>User Management</span>
+        </button>
         <button id="refresh-btn" class="btn btn-secondary" title="Refresh Registration Data">
           <i class="fa-solid fa-rotate"></i>
-          <span>Refresh Data</span>
+          <span>Refresh</span>
         </button>
         <button id="export-csv-btn" class="btn btn-success" title="Download Excel CSV File">
           <i class="fa-solid fa-file-excel"></i>
@@ -327,6 +347,130 @@
           <i class="fa-solid fa-trash-can"></i> Delete Record
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- User Management Modal -->
+  <div id="users-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3><i class="fa-solid fa-users-gear text-warning"></i> User Access & Permission Management</h3>
+          <span class="modal-subtitle">Manage system users, roles, and granular access permissions</span>
+        </div>
+        <button id="close-users-modal-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-body-top-bar">
+          <button id="create-user-btn" class="btn btn-primary">
+            <i class="fa-solid fa-user-plus"></i> Create New User
+          </button>
+        </div>
+
+        <div class="table-responsive mt-3">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User Profile</th>
+                <th>Role</th>
+                <th>Permissions</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="6" class="text-center text-muted">Loading user directory...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit User Dialog Modal -->
+  <div id="user-form-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="user-form-title"><i class="fa-solid fa-user-plus"></i> Create Admin User</h3>
+        <button id="close-user-form-modal-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="user-form" class="modal-body">
+        <input type="hidden" id="user-form-id">
+        <div class="form-group">
+          <label for="u-username">Username</label>
+          <input type="text" id="u-username" placeholder="e.g. jsmith" required>
+        </div>
+        <div class="form-group mt-2">
+          <label for="u-email">Email Address</label>
+          <input type="email" id="u-email" placeholder="jsmith@navodaya.com" required>
+        </div>
+        <div class="form-group mt-2" id="u-password-group">
+          <label for="u-password">Password</label>
+          <input type="password" id="u-password" placeholder="Enter password (min 4 chars)" required>
+        </div>
+        <div class="form-group mt-2">
+          <label for="u-role">Role Preset</label>
+          <select id="u-role">
+            <option value="admin">Admin (Full Control)</option>
+            <option value="manager" selected>Manager (View, Edit, Export)</option>
+            <option value="viewer">Viewer (Read-Only)</option>
+          </select>
+        </div>
+
+        <div class="form-section-title mt-3">
+          <i class="fa-solid fa-key"></i> Granular Permissions
+        </div>
+        <div class="perms-checkbox-list">
+          <label class="checkbox-label">
+            <input type="checkbox" id="perm-can_view" checked disabled>
+            <span>View Registrations & Stats</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="perm-can_edit" checked>
+            <span>Edit Participant Data</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="perm-can_export" checked>
+            <span>Export CSV / Excel</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="perm-can_delete">
+            <span>Delete Registration Records</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="perm-can_manage_users">
+            <span>User & Permission Management</span>
+          </label>
+        </div>
+
+        <div class="modal-footer mt-4">
+          <button type="button" id="cancel-user-form-btn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="save-user-btn" class="btn btn-primary">Save User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reset User Password Modal -->
+  <div id="reset-password-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-key text-warning"></i> Reset User Password</h3>
+        <button id="close-reset-password-modal-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="reset-password-form" class="modal-body">
+        <input type="hidden" id="reset-target-user-id">
+        <p class="text-sm text-muted mb-3">Resetting password for user: <strong id="reset-target-username">--</strong></p>
+        <div class="form-group">
+          <label for="reset-new-password">New Password</label>
+          <input type="password" id="reset-new-password" placeholder="Enter new password..." required>
+        </div>
+        <div class="modal-footer mt-4">
+          <button type="button" id="cancel-reset-password-btn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </div>
+      </form>
     </div>
   </div>
 
