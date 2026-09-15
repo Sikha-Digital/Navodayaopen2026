@@ -179,11 +179,10 @@
                 <line x1="14" y1="13" x2="18" y2="13" />
                 <line x1="7" y1="16" x2="17" y2="16" />
               </svg>
-              <input type="tel" id="iqamaInput" required placeholder=" " autocomplete="off" maxlength="10"
-                pattern="[0-9]{10}">
+              <input type="text" id="iqamaInput" required placeholder=" " autocomplete="off" maxlength="30">
               <label for="iqamaInput">Iqama / ID Number</label>
             </div>
-            <span class="error-text" id="iqamaError">10-digit Iqama / ID Number is required</span>
+            <span class="error-text" id="iqamaError">Iqama / ID Number is required (min 5 chars)</span>
           </div>
 
           <!-- Side-by-side Row for Gender and Date of Birth -->
@@ -222,10 +221,19 @@
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-                <input type="date" id="dobInput" required placeholder=" " autocomplete="bday">
+                <input type="text" id="dobInput" required placeholder=" " autocomplete="bday" maxlength="10" inputmode="numeric" data-placeholder="DD-MM-YYYY">
                 <label for="dobInput">Date of Birth</label>
+                <input type="date" id="dobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" tabindex="-1" aria-hidden="true">
+                <button type="button" class="calendar-btn" id="dobPickerBtn" aria-label="Open Calendar Date Picker" title="Open Calendar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </button>
               </div>
-              <span class="error-text" id="dobError">DOB is required</span>
+              <span class="error-text" id="dobError">Date of Birth is required (DD-MM-YYYY)</span>
             </div>
           </div>
 
@@ -494,11 +502,10 @@
                   <line x1="14" y1="13" x2="18" y2="13" />
                   <line x1="7" y1="16" x2="17" y2="16" />
                 </svg>
-                <input type="tel" id="partnerIqamaInput" placeholder=" " autocomplete="off" maxlength="10"
-                  pattern="[0-9]{10}">
+                <input type="text" id="partnerIqamaInput" placeholder=" " autocomplete="off" maxlength="30">
                 <label for="partnerIqamaInput">Partner Iqama / ID Number</label>
               </div>
-              <span class="error-text" id="partnerIqamaError">Partner 10-digit Iqama is required</span>
+              <span class="error-text" id="partnerIqamaError">Partner Iqama / ID is required (min 5 chars)</span>
             </div>
 
             <!-- Side-by-side Row for Partner Gender and Partner DOB -->
@@ -537,10 +544,19 @@
                     <line x1="8" y1="2" x2="8" y2="6" />
                     <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
-                  <input type="date" id="partnerDobInput" placeholder=" " autocomplete="off">
-                  <label for="partnerDobInput">Partner DOB</label>
+                  <input type="text" id="partnerDobInput" placeholder=" " autocomplete="off" maxlength="10" inputmode="numeric" data-placeholder="DD-MM-YYYY">
+                  <label for="partnerDobInput">Date of Birth</label>
+                  <input type="date" id="partnerDobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" tabindex="-1" aria-hidden="true">
+                  <button type="button" class="calendar-btn" id="partnerDobPickerBtn" aria-label="Open Partner Calendar Date Picker" title="Open Calendar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </button>
                 </div>
-                <span class="error-text" id="partnerDobError">Partner DOB is required</span>
+                <span class="error-text" id="partnerDobError">Partner Date of Birth is required (DD-MM-YYYY)</span>
               </div>
             </div>
 
@@ -660,6 +676,38 @@
       <p class="success-message">Thank you for registering. Your entry for the <strong>Navodaya Open 2026 International
           Badminton Tournament</strong> has been successfully recorded.
       </p>
+
+      <!-- Dynamic Auto-Generated Team & Player IDs Box -->
+      <div id="successPlayerCards" class="success-player-cards hidden">
+        <!-- Team ID Highlight Banner -->
+        <div class="success-team-banner">
+          <div class="team-banner-left">
+            <span class="team-banner-tag">OFFICIAL TEAM ID</span>
+            <div class="team-banner-val" id="successTeamId">T----</div>
+          </div>
+          <div class="team-banner-right">
+            <span class="team-category-flight" id="successCategoryFlight">-</span>
+          </div>
+        </div>
+
+        <div class="success-card main-player-card">
+          <span class="player-card-role">Main Participant</span>
+          <div class="player-card-name" id="successMainName">-</div>
+          <div class="player-card-badge">
+            <span class="badge-label">Player ID</span>
+            <span class="badge-val" id="successMainId">#----</span>
+          </div>
+        </div>
+        <div class="success-card partner-card hidden" id="successPartnerCard">
+          <span class="player-card-role">Co-Participant</span>
+          <div class="player-card-name" id="successPartnerName">-</div>
+          <div class="player-card-badge">
+            <span class="badge-label">Player ID</span>
+            <span class="badge-val" id="successPartnerId">#----</span>
+          </div>
+        </div>
+      </div>
+
       <button id="resetBtn" class="reset-btn">Register Another Player</button>
     </div>
 

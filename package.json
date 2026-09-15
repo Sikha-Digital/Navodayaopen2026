@@ -1,0 +1,29 @@
+{
+  "name": "navodaya-open-2026",
+  "version": "1.0.0",
+  "description": "Navodaya Open 2026 Badminton Tournament Registration with Neon DB PostgreSQL Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "setup-db": "node db.js --init"
+  },
+  "keywords": [
+    "navodaya-open",
+    "badminton",
+    "tournament",
+    "neon-db",
+    "postgresql",
+    "express"
+  ],
+  "author": "Sikha Digital / Navodaya",
+  "license": "ISC",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "nodemailer": "^6.9.16",
+    "pg": "^8.13.1"
+  }
+}

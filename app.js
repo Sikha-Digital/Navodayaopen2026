@@ -2,8 +2,64 @@
  * Navodaya Open 2026 - International Badminton Tournament Registration Frontend
  */
 
-// IMPORTANT: Replace this placeholder with your deployed Google Apps Script Web App URL!
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwj9BachqS-O30uiqF8-x-KkFqzmjrpL9KGQbG6lokJl3n80X4jnr9QWSgnxPgRrD0U/exec';
+// Backend API Endpoints (Neon DB Express Backend)
+const API_ENDPOINT = window.API_ENDPOINT || '/api/register';
+const TOURNAMENT_CONFIG_ENDPOINT = window.TOURNAMENT_CONFIG_ENDPOINT || '/api/tournament-config';
+
+// Dynamic Categories & Levels (populated from Neon DB backend)
+let serverCategories = [
+  { name: "Mens Doubles", cat_code: "MD", is_doubles: true, gender_allowed: "Male" },
+  { name: "Womens Doubles", cat_code: "WD", is_doubles: true, gender_allowed: "Female" },
+  { name: "Mixed Doubles", cat_code: "XD", is_doubles: true, gender_allowed: "Mixed" },
+  { name: "Girls Doubles", cat_code: "GD", is_doubles: true, gender_allowed: "Female", max_age: 17 },
+  { name: "Boys Doubles", cat_code: "BD", is_doubles: true, gender_allowed: "Male", max_age: 17 }
+];
+
+let serverLevels = [];
+
+let serverCategoryLevelMap = {
+  "Mens Doubles": [
+    "International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6", "Masters 35Plus", "Veterance 45Plus"
+  ],
+  "Womens Doubles": [
+    "Championship", "F1", "F2", "F3", "F4", "F5", "F6"
+  ],
+  "Mixed Doubles": [
+    "International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6"
+  ],
+  "Boys Doubles": [
+    "Under 9", "Under 11", "Under 13", "Under 15", "Under 17"
+  ],
+  "Girls Doubles": [
+    "Under 9", "Under 11", "Under 13", "Under 15", "Under 17"
+  ]
+};
+
+/**
+ * Fetch dynamic tournament categories & levels directly from Neon DB backend
+ */
+async function fetchTournamentConfig() {
+  try {
+    const res = await fetch(TOURNAMENT_CONFIG_ENDPOINT);
+    if (res.ok) {
+      const result = await res.json();
+      if (result && result.status === 'success') {
+        if (Array.isArray(result.categories) && result.categories.length > 0) {
+          serverCategories = result.categories;
+        }
+        if (Array.isArray(result.levels) && result.levels.length > 0) {
+          serverLevels = result.levels;
+        }
+        if (result.categoryLevelMap && typeof result.categoryLevelMap === 'object') {
+          serverCategoryLevelMap = result.categoryLevelMap;
+        }
+        updateCategoryAndAgeUI();
+      }
+    }
+  } catch (err) {
+    console.warn('[Config Warning] Using offline tournament configuration:', err.message);
+  }
+}
 
 // Dropdown Component Controller (scroll & select, no search filter)
 class SearchableCombobox {
@@ -119,12 +175,22 @@ class SearchableCombobox {
 
   updateOptions(options) {
     const lEl = this.list;
-    if (!lEl) return;
+    if (!lEl || !Array.isArray(options)) return;
+
+    // Check if options are already identical to avoid unnecessary DOM rebuilding
+    const currentOptions = Array.from(lEl.querySelectorAll('li')).map(li => li.getAttribute('data-value'));
+    const isSame = currentOptions.length === options.length && currentOptions.every((opt, idx) => opt === options[idx]);
+    if (isSame) return;
+
     lEl.innerHTML = '';
+    const currentVal = this.input ? this.input.value.trim() : '';
     options.forEach(opt => {
       const li = document.createElement('li');
       li.setAttribute('data-value', opt);
       li.textContent = opt;
+      if (currentVal && currentVal === opt) {
+        li.classList.add('selected');
+      }
       lEl.appendChild(li);
     });
     this.setupItems();
@@ -225,6 +291,8 @@ const emailInput = document.getElementById('emailInput');
 const iqamaInput = document.getElementById('iqamaInput');
 const genderInput = document.getElementById('genderInput');
 const dobInput = document.getElementById('dobInput');
+const dobNativePicker = document.getElementById('dobNativePicker');
+const dobPickerBtn = document.getElementById('dobPickerBtn');
 const nationalityInput = document.getElementById('nationalityInput');
 const clubInput = document.getElementById('clubInput');
 const categoryInput = document.getElementById('categoryInput');
@@ -236,6 +304,8 @@ const partnerPhoneInput = document.getElementById('partnerPhoneInput');
 const partnerIqamaInput = document.getElementById('partnerIqamaInput');
 const partnerGenderInput = document.getElementById('partnerGenderInput');
 const partnerDobInput = document.getElementById('partnerDobInput');
+const partnerDobNativePicker = document.getElementById('partnerDobNativePicker');
+const partnerDobPickerBtn = document.getElementById('partnerDobPickerBtn');
 const partnerNationalityInput = document.getElementById('partnerNationalityInput');
 
 const submitBtn = document.getElementById('submitBtn');
@@ -265,9 +335,9 @@ function validateStep1() {
   const isNameValid = validateInput(nameInput, document.getElementById('nameError'), null, 'Full Name is required.');
   const isPhoneValid = validateInput(phoneInput, document.getElementById('phoneError'), (val) => PHONE_REGEX.test(val), 'Please enter a valid phone number (7-15 digits).');
   const isEmailValid = validateInput(emailInput, document.getElementById('emailError'), (val) => EMAIL_REGEX.test(val), 'Please enter a valid email address.');
-  const isIqamaValid = validateInput(iqamaInput, document.getElementById('iqamaError'), (val) => IQAMA_REGEX.test(val), 'Please enter a 10-digit Iqama / ID number.');
+  const isIqamaValid = validateIqamaField(iqamaInput, document.getElementById('iqamaError'), 'Iqama / ID Number');
   const isGenderValid = validateInput(genderInput, document.getElementById('genderError'), null, 'Gender selection is required.');
-  const isDobValid = validateInput(dobInput, document.getElementById('dobError'), null, 'Date of Birth is required.');
+  const isDobValid = validateDobField(dobInput, document.getElementById('dobError'), 'Date of Birth');
   const isNationalityValid = validateInput(nationalityInput, document.getElementById('nationalityError'), null, 'Nationality is required.');
   const isClubValid = validateInput(clubInput, document.getElementById('clubError'), null, 'Country or Club Name is required.');
 
@@ -368,13 +438,157 @@ function initComboboxes() {
 
 
 /**
+ * Parse date strings supporting DD-MM-YYYY, DD/MM/YYYY, and YYYY-MM-DD
+ * @param {string} dateStr 
+ * @returns {Date|null}
+ */
+function parseDateString(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const s = dateStr.trim();
+
+  // 1. Format: DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+      return d;
+    }
+    return null;
+  }
+
+  // 2. Format: YYYY-MM-DD
+  const ymdMatch = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+      return d;
+    }
+    return null;
+  }
+
+  const fallbackDate = new Date(s);
+  return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+}
+
+// Regex for strict DD-MM-YYYY format
+const DOB_REGEX = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+
+/**
+ * Apply auto-formatting mask (DD-MM-YYYY) as digits are typed
+ */
+function applyDateMask(input, onChangeCallback) {
+  if (!input) return;
+
+  input.addEventListener('input', (e) => {
+    let cursor = input.selectionStart;
+    let raw = input.value.replace(/\D/g, '');
+    if (raw.length > 8) raw = raw.slice(0, 8);
+
+    let formatted = '';
+    if (raw.length > 4) {
+      formatted = `${raw.slice(0, 2)}-${raw.slice(2, 4)}-${raw.slice(4)}`;
+    } else if (raw.length > 2) {
+      formatted = `${raw.slice(0, 2)}-${raw.slice(2)}`;
+    } else {
+      formatted = raw;
+    }
+
+    input.value = formatted;
+
+    if (typeof onChangeCallback === 'function') {
+      onChangeCallback();
+    }
+  });
+}
+
+/**
+ * Date Picker Setup: binds a text DD-MM-YYYY input with hidden native datepicker and calendar trigger button
+ */
+function setupDatePicker(textInput, nativePicker, triggerBtn, onDateChanged) {
+  if (!textInput || !nativePicker || !triggerBtn) return;
+
+  // Sync text input (DD-MM-YYYY) to native picker (YYYY-MM-DD)
+  function syncTextToNative() {
+    const val = textInput.value.trim();
+    if (DOB_REGEX.test(val)) {
+      const [d, m, y] = val.split('-');
+      nativePicker.value = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+  }
+
+  // Trigger calendar open on button click
+  triggerBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    syncTextToNative();
+    if (typeof nativePicker.showPicker === 'function') {
+      try {
+        nativePicker.showPicker();
+      } catch (err) {
+        nativePicker.focus();
+        nativePicker.click();
+      }
+    } else {
+      nativePicker.focus();
+      nativePicker.click();
+    }
+  });
+
+  // When date is selected from calendar picker
+  nativePicker.addEventListener('change', () => {
+    if (nativePicker.value) {
+      const [y, m, d] = nativePicker.value.split('-');
+      textInput.value = `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
+      textInput.classList.add('touched');
+      textInput.dispatchEvent(new Event('input', { bubbles: true }));
+      textInput.dispatchEvent(new Event('change', { bubbles: true }));
+      if (typeof onDateChanged === 'function') {
+        onDateChanged();
+      }
+    }
+  });
+}
+
+/**
+ * Validate a DOB input field for DD-MM-YYYY format and realistic tournament age
+ */
+function validateDobField(input, errorElement, label = 'Date of Birth') {
+  const val = input ? input.value.trim() : '';
+  if (!val) {
+    return validateInput(input, errorElement, null, `${label} is required (DD-MM-YYYY).`);
+  }
+  if (!DOB_REGEX.test(val)) {
+    return validateInput(input, errorElement, () => false, `Please enter date in DD-MM-YYYY format.`);
+  }
+  const parsed = parseDateString(val);
+  if (!parsed) {
+    return validateInput(input, errorElement, () => false, `Please enter a valid calendar date.`);
+  }
+  if (parsed > new Date()) {
+    return validateInput(input, errorElement, () => false, `${label} cannot be in the future.`);
+  }
+  const age = calculateAge(val);
+  if (age !== null && (age < 4 || age > 99)) {
+    return validateInput(input, errorElement, () => false, `Please enter a valid tournament age (4-99 years).`);
+  }
+  return validateInput(input, errorElement, () => true, '');
+}
+
+/**
  * Calculate age based on date of birth string and tournament reference date (Oct 30, 2026)
  */
 function calculateAge(dobString, refDateStr = '2026-10-30') {
   if (!dobString) return null;
-  const birthDate = new Date(dobString);
-  if (isNaN(birthDate.getTime())) return null;
-  const refDate = new Date(refDateStr);
+  const birthDate = parseDateString(dobString);
+  if (!birthDate) return null;
+
+  const refDate = parseDateString(refDateStr) || new Date(2026, 9, 30);
   let age = refDate.getFullYear() - birthDate.getFullYear();
   const m = refDate.getMonth() - birthDate.getMonth();
   if (m < 0 || (m === 0 && refDate.getDate() < birthDate.getDate())) {
@@ -385,109 +599,85 @@ function calculateAge(dobString, refDateStr = '2026-10-30') {
 
 /**
  * Returns available event categories based on Gender and Age (as of Oct 30, 2026)
+ * Driven dynamically by Neon DB backend categories data
  */
 function getAvailableCategories(gender, age) {
   const isMale = gender === 'Male';
   const isFemale = gender === 'Female';
 
-  if (isMale && age !== null && age !== undefined && !isNaN(age) && age <= 17) {
-    return ["Mens Doubles", "Boys Doubles", "Mixed Doubles"];
+  if (Array.isArray(serverCategories) && serverCategories.length > 0) {
+    return serverCategories
+      .filter(cat => {
+        const catGender = cat.gender_allowed || 'Any';
+        if (isMale && catGender === 'Female') return false;
+        if (isFemale && catGender === 'Male') return false;
+
+        if (age !== null && age !== undefined && !isNaN(age)) {
+          if (cat.min_age !== null && cat.min_age !== undefined && age < cat.min_age) return false;
+          if (cat.max_age !== null && cat.max_age !== undefined && age > cat.max_age) return false;
+
+          const lowerName = (cat.name || '').toLowerCase();
+          if (age > 17 && (lowerName.includes('boys') || lowerName.includes('girls') || lowerName.includes('junior'))) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map(c => c.name);
   }
 
-  if (isFemale && age !== null && age !== undefined && !isNaN(age) && age <= 17) {
-    return ["Womens Doubles", "Girls Doubles", "Mixed Doubles"];
-  }
-
-  if (isMale && age !== null && age !== undefined && !isNaN(age) && age >= 18) {
-    return ["Mens Doubles", "Mixed Doubles"];
-  }
-
-  if (isFemale && age !== null && age !== undefined && !isNaN(age) && age >= 18) {
-    return ["Womens Doubles", "Mixed Doubles"];
-  }
-
-  if (isMale) {
-    return ["Mens Doubles", "Boys Doubles", "Mixed Doubles"];
-  }
-  if (isFemale) {
-    return ["Womens Doubles", "Girls Doubles", "Mixed Doubles"];
-  }
-  if (age !== null && age !== undefined && !isNaN(age) && age <= 17) {
-    return ["Mens Doubles", "Womens Doubles", "Mixed Doubles", "Girls Doubles", "Boys Doubles"];
-  }
-
-  return [
-    "Mens Doubles",
-    "Womens Doubles",
-    "Mixed Doubles",
-    "Girls Doubles",
-    "Boys Doubles"
-  ];
+  if (isMale) return ["Mens Doubles", "Boys Doubles", "Mixed Doubles"];
+  if (isFemale) return ["Womens Doubles", "Girls Doubles", "Mixed Doubles"];
+  return ["Mens Doubles", "Womens Doubles", "Mixed Doubles", "Girls Doubles", "Boys Doubles"];
 }
 
 /**
- * Returns available level / flight choices based on Gender, Age, and Category
+ * Returns available level / flight choices based on Category, Gender, and Age
+ * Driven dynamically by Neon DB backend levels data
  */
 function getAvailableFlights(gender, age, category = '') {
-  const isMale = gender === 'Male';
-  const isFemale = gender === 'Female';
-  const cat = category.toLowerCase();
-  const isJuniorCategory = cat.includes('boys') || cat.includes('girls');
+  const cat = (category || '').trim();
 
-  // If Boys Doubles or Girls Doubles is selected: show ONLY junior Under-X levels appropriate for age
-  if (isJuniorCategory) {
+  // 1. Mixed Doubles: ALWAYS allows full open flights (International through F6) regardless of primary player gender
+  if (cat === 'Mixed Doubles') {
+    return ["International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6"];
+  }
+
+  // 2. Womens Doubles: Championship through F6
+  if (cat === 'Womens Doubles') {
+    return ["Championship", "F1", "F2", "F3", "F4", "F5", "F6"];
+  }
+
+  // 3. Mens Doubles: International through F6 (+ Masters 35Plus / Veterance 45Plus depending on age)
+  if (cat === 'Mens Doubles') {
+    const baseMD = ["International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6"];
     if (age !== null && age !== undefined && !isNaN(age)) {
-      if (age <= 9) {
-        return ["Under 9", "Under 11", "Under 13", "Under 15", "Under 17"];
-      } else if (age <= 11) {
-        return ["Under 11", "Under 13", "Under 15", "Under 17"];
-      } else if (age <= 13) {
-        return ["Under 13", "Under 15", "Under 17"];
-      } else if (age <= 15) {
-        return ["Under 15", "Under 17"];
-      } else {
-        return ["Under 17"];
-      }
+      if (age >= 45) return [...baseMD, "Masters 35Plus", "Veterance 45Plus"];
+      if (age >= 35) return [...baseMD, "Masters 35Plus"];
+      return baseMD;
+    }
+    return [...baseMD, "Masters 35Plus", "Veterance 45Plus"];
+  }
+
+  // 4. Boys Doubles & Girls Doubles: Junior flight levels (Under 9 through Under 17)
+  if (cat === 'Boys Doubles' || cat === 'Girls Doubles') {
+    if (age !== null && age !== undefined && !isNaN(age)) {
+      if (age <= 9) return ["Under 9", "Under 11", "Under 13", "Under 15", "Under 17"];
+      if (age <= 11) return ["Under 11", "Under 13", "Under 15", "Under 17"];
+      if (age <= 13) return ["Under 13", "Under 15", "Under 17"];
+      if (age <= 15) return ["Under 15", "Under 17"];
+      return ["Under 17"];
     }
     return ["Under 9", "Under 11", "Under 13", "Under 15", "Under 17"];
   }
 
-  // If Mens Doubles, Womens Doubles, or Mixed Doubles is selected: EXCLUDE Under-X levels
-  const baseMaleFlights = ["International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6"];
-  const baseFemaleFlights = ["Championship", "F1", "F2", "F3", "F4", "F5", "F6"];
-  const allBaseFlights = ["International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6"];
-
-  if (isMale) {
-    let flights = [...baseMaleFlights];
-    if (age !== null && age !== undefined && !isNaN(age)) {
-      if (age >= 45) {
-        flights.push("Masters 35Plus", "Veterance 45Plus");
-      } else if (age >= 35) {
-        flights.push("Masters 35Plus");
-      }
-    } else {
-      flights.push("Masters 35Plus", "Veterance 45Plus");
-    }
-    return flights;
+  // 5. Dynamic lookup if custom category defined in database
+  if (cat && serverCategoryLevelMap[cat]) {
+    return [...serverCategoryLevelMap[cat]];
   }
 
-  if (isFemale) {
-    let flights = [...baseFemaleFlights];
-    return flights;
-  }
-
-  // Gender not selected yet: return adult base flights + Masters/Veterans
-  let flights = [...allBaseFlights];
-  if (age !== null && age !== undefined && !isNaN(age)) {
-    if (age >= 45) {
-      flights.push("Masters 35Plus", "Veterance 45Plus");
-    } else if (age >= 35) {
-      flights.push("Masters 35Plus");
-    }
-  } else {
-    flights.push("Masters 35Plus", "Veterance 45Plus");
-  }
-  return flights;
+  // 6. Default flight levels when no category has been selected yet
+  return ["International", "Premiere", "Championship", "F1", "F2", "F3", "F4", "F5", "F6", "Masters 35Plus", "Veterance 45Plus"];
 }
 
 /**
@@ -638,7 +828,46 @@ function checkDoublesCategory() {
 // Regex Validations
 const PHONE_REGEX = /^[0-9]{7,15}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const IQAMA_REGEX = /^[0-9]{10}$/;
+const ID_REGEX = /^[A-Z0-9]{5,30}$/;
+
+/**
+ * Normalizes an Iqama / ID number:
+ * Strips all internal and surrounding whitespace, hyphens, underscores and converts to uppercase.
+ * Example: 'S 896056' -> 'S896056', 's896056' -> 'S896056', ' s 896056 ' -> 'S896056'
+ * @param {string} val
+ * @returns {string}
+ */
+function normalizeId(val) {
+  if (!val) return '';
+  return String(val).replace(/[\s\-_]/g, '').toUpperCase();
+}
+
+/**
+ * Validates an Iqama / ID Number (Min 5 characters, alphanumeric, case & space insensitive)
+ */
+function validateIqamaField(input, errorElement, label) {
+  const rawVal = input.value;
+  const normalized = normalizeId(rawVal);
+  const isRequired = input.hasAttribute('required') || !partnerSection.classList.contains('hidden');
+
+  if (!rawVal.trim()) {
+    if (isRequired) {
+      return validateInput(input, errorElement, () => false, `${label || 'Iqama / ID Number'} is required.`);
+    }
+    return true;
+  }
+
+  if (normalized.length < 5) {
+    return validateInput(input, errorElement, () => false, `${label || 'Iqama / ID Number'} must be at least 5 characters.`);
+  }
+
+  if (!ID_REGEX.test(normalized)) {
+    return validateInput(input, errorElement, () => false, `Please enter a valid alphanumeric ${label || 'Iqama / ID Number'}.`);
+  }
+
+  return validateInput(input, errorElement, () => true, '');
+}
+
 
 /**
  * Validates a single input field
@@ -707,7 +936,7 @@ function validatePartnerGender() {
 }
 
 /**
- * Validates Partner DOB based on date validity and category/flight age limits
+ * Validates Partner DOB based on DD-MM-YYYY format, calendar validity, and category/flight age limits
  */
 function validatePartnerDob() {
   const input = partnerDobInput;
@@ -716,12 +945,16 @@ function validatePartnerDob() {
 
   const val = input.value.trim();
   if (!val) {
-    return validateInput(input, errorElement, null, 'Partner Date of Birth is required.');
+    return validateInput(input, errorElement, null, 'Partner Date of Birth is required (DD-MM-YYYY).');
   }
 
-  const birthDate = new Date(val);
-  if (isNaN(birthDate.getTime())) {
-    return validateInput(input, errorElement, () => false, 'Please enter a valid Partner Date of Birth.');
+  if (!DOB_REGEX.test(val)) {
+    return validateInput(input, errorElement, () => false, 'Please enter partner date in DD-MM-YYYY format.');
+  }
+
+  const birthDate = parseDateString(val);
+  if (!birthDate) {
+    return validateInput(input, errorElement, () => false, 'Please enter a valid calendar date.');
   }
 
   if (birthDate > new Date()) {
@@ -731,6 +964,10 @@ function validatePartnerDob() {
   const pAge = calculateAge(val);
   const category = categoryInput.value.trim();
   const flight = flightInput.value.trim();
+
+  if (pAge !== null && (pAge < 4 || pAge > 99)) {
+    return validateInput(input, errorElement, () => false, 'Please enter a valid partner tournament age (4-99 years).');
+  }
 
   if (flight === 'Under 9' && pAge > 9) {
     return validateInput(input, errorElement, () => false, 'Partner must be age 9 or under for Under 9 level.');
@@ -762,16 +999,20 @@ function validatePartnerIqama() {
   const errorElement = document.getElementById('partnerIqamaError');
   if (partnerSection.classList.contains('hidden')) return true;
 
-  const val = input.value.trim();
-  const primaryIqama = iqamaInput.value.trim();
+  const rawVal = input.value;
+  const normVal = normalizeId(rawVal);
+  const normPrimary = normalizeId(iqamaInput.value);
 
-  if (!val) {
-    return validateInput(input, errorElement, null, 'Please enter partner 10-digit Iqama / ID number.');
+  if (!rawVal.trim()) {
+    return validateInput(input, errorElement, () => false, 'Partner Iqama / ID Number is required.');
   }
-  if (!IQAMA_REGEX.test(val)) {
-    return validateInput(input, errorElement, () => false, 'Please enter partner 10-digit Iqama / ID number.');
+  if (normVal.length < 5) {
+    return validateInput(input, errorElement, () => false, 'Partner Iqama / ID must be at least 5 characters.');
   }
-  if (primaryIqama && val === primaryIqama) {
+  if (!ID_REGEX.test(normVal)) {
+    return validateInput(input, errorElement, () => false, 'Please enter a valid alphanumeric Partner Iqama / ID.');
+  }
+  if (normPrimary && normVal === normPrimary) {
     return validateInput(input, errorElement, () => false, 'Partner Iqama / ID cannot be the same as Primary player.');
   }
 
@@ -812,6 +1053,46 @@ function validatePartnerNationality() {
   return validateInput(input, errorElement, () => true, '');
 }
 
+// Event Listeners for Primary Player Details
+nameInput.addEventListener('blur', () => validateInput(nameInput, document.getElementById('nameError'), null, 'Full Name is required.'));
+nameInput.addEventListener('input', () => {
+  if (nameInput.classList.contains('touched')) {
+    validateInput(nameInput, document.getElementById('nameError'), null, 'Full Name is required.');
+  }
+});
+
+phoneInput.addEventListener('blur', () => validateInput(phoneInput, document.getElementById('phoneError'), (val) => PHONE_REGEX.test(val), 'Please enter a valid phone number (7-15 digits).'));
+phoneInput.addEventListener('input', () => {
+  phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '');
+  if (phoneInput.classList.contains('touched')) {
+    validateInput(phoneInput, document.getElementById('phoneError'), (val) => PHONE_REGEX.test(val), 'Please enter a valid phone number (7-15 digits).');
+  }
+});
+
+emailInput.addEventListener('blur', () => validateInput(emailInput, document.getElementById('emailError'), (val) => EMAIL_REGEX.test(val), 'Please enter a valid email address.'));
+emailInput.addEventListener('input', () => {
+  if (emailInput.classList.contains('touched')) {
+    validateInput(emailInput, document.getElementById('emailError'), (val) => EMAIL_REGEX.test(val), 'Please enter a valid email address.');
+  }
+});
+
+iqamaInput.addEventListener('blur', () => {
+  if (iqamaInput.value) iqamaInput.value = normalizeId(iqamaInput.value);
+  validateIqamaField(iqamaInput, document.getElementById('iqamaError'), 'Iqama / ID Number');
+  if (!partnerSection.classList.contains('hidden') && partnerIqamaInput.value) {
+    validatePartnerIqama();
+  }
+});
+iqamaInput.addEventListener('input', () => {
+  iqamaInput.value = iqamaInput.value.replace(/[^a-zA-Z0-9\s\-_]/g, '');
+  if (iqamaInput.classList.contains('touched')) {
+    validateIqamaField(iqamaInput, document.getElementById('iqamaError'), 'Iqama / ID Number');
+  }
+  if (!partnerSection.classList.contains('hidden') && partnerIqamaInput.classList.contains('touched')) {
+    validatePartnerIqama();
+  }
+});
+
 // Event Listeners for Validation and Dynamic Category Population
 genderInput.addEventListener('blur', () => validateInput(genderInput, document.getElementById('genderError'), null, 'Gender selection is required.'));
 genderInput.addEventListener('change', () => {
@@ -821,16 +1102,53 @@ genderInput.addEventListener('change', () => {
   validatePartnerGender();
 });
 
-dobInput.addEventListener('blur', () => validateInput(dobInput, document.getElementById('dobError'), null, 'Date of Birth is required.'));
-dobInput.addEventListener('change', () => {
-  validateInput(dobInput, document.getElementById('dobError'), null, 'Date of Birth is required.');
+// Auto-mask DD-MM-YYYY format and date picker for Date of Birth inputs
+applyDateMask(dobInput, () => {
+  updateCategoryAndAgeUI();
+  if (dobInput.classList.contains('touched')) {
+    validateDobField(dobInput, document.getElementById('dobError'), 'Date of Birth');
+  }
+});
+
+setupDatePicker(dobInput, dobNativePicker, dobPickerBtn, () => {
+  validateDobField(dobInput, document.getElementById('dobError'), 'Date of Birth');
   updateCategoryAndAgeUI();
   validatePartnerDob();
 });
-dobInput.addEventListener('input', () => {
-  updateCategoryAndAgeUI();
+
+applyDateMask(partnerDobInput, () => {
+  if (partnerDobInput.classList.contains('touched')) {
+    validatePartnerDob();
+  }
 });
 
+setupDatePicker(partnerDobInput, partnerDobNativePicker, partnerDobPickerBtn, () => {
+  validatePartnerDob();
+});
+
+dobInput.addEventListener('focus', () => {
+  dobInput.placeholder = 'DD-MM-YYYY';
+});
+dobInput.addEventListener('blur', () => {
+  if (!dobInput.value.trim()) dobInput.placeholder = ' ';
+  validateDobField(dobInput, document.getElementById('dobError'), 'Date of Birth');
+});
+dobInput.addEventListener('change', () => {
+  validateDobField(dobInput, document.getElementById('dobError'), 'Date of Birth');
+  updateCategoryAndAgeUI();
+  validatePartnerDob();
+});
+
+partnerDobInput.addEventListener('focus', () => {
+  partnerDobInput.placeholder = 'DD-MM-YYYY';
+});
+partnerDobInput.addEventListener('blur', () => {
+  if (!partnerDobInput.value.trim()) partnerDobInput.placeholder = ' ';
+  validatePartnerDob();
+});
+partnerDobInput.addEventListener('change', () => {
+  validatePartnerDob();
+});
 
 nationalityInput.addEventListener('blur', () => validateInput(nationalityInput, document.getElementById('nationalityError'), null, 'Nationality is required.'));
 nationalityInput.addEventListener('input', () => nationalityInput.classList.contains('touched') && validateInput(nationalityInput, document.getElementById('nationalityError'), null, 'Nationality is required.'));
@@ -879,10 +1197,11 @@ partnerPhoneInput.addEventListener('input', () => {
 });
 
 partnerIqamaInput.addEventListener('blur', () => {
+  if (partnerIqamaInput.value) partnerIqamaInput.value = normalizeId(partnerIqamaInput.value);
   validatePartnerIqama();
 });
 partnerIqamaInput.addEventListener('input', () => {
-  partnerIqamaInput.value = partnerIqamaInput.value.replace(/[^0-9]/g, '');
+  partnerIqamaInput.value = partnerIqamaInput.value.replace(/[^a-zA-Z0-9\s\-_]/g, '');
   if (!partnerSection.classList.contains('hidden') && partnerIqamaInput.classList.contains('touched')) {
     validatePartnerIqama();
   }
@@ -895,12 +1214,6 @@ partnerGenderInput.addEventListener('change', () => {
   validatePartnerGender();
 });
 
-partnerDobInput.addEventListener('blur', () => {
-  validatePartnerDob();
-});
-partnerDobInput.addEventListener('change', () => {
-  validatePartnerDob();
-});
 partnerDobInput.addEventListener('input', () => {
   if (partnerDobInput.classList.contains('touched')) {
     validatePartnerDob();
@@ -967,7 +1280,7 @@ form.addEventListener('submit', async (e) => {
     name: nameInput.value.trim(),
     phone: primaryCode + rawPhone,
     email: emailInput.value.trim(),
-    iqama: iqamaInput.value.trim(),
+    iqama: normalizeId(iqamaInput.value),
     gender: genderInput.value.trim(),
     dob: dobInput.value.trim(),
     nationality: nationalityInput.value.trim(),
@@ -976,38 +1289,31 @@ form.addEventListener('submit', async (e) => {
     flight: flightInput.value.trim(),
     partnerName: partnerSection.classList.contains('hidden') ? '' : partnerNameInput.value.trim(),
     partnerPhone: partnerSection.classList.contains('hidden') ? '' : partnerCode + rawPartnerPhone,
-    partnerIqama: partnerSection.classList.contains('hidden') ? '' : partnerIqamaInput.value.trim(),
+    partnerIqama: partnerSection.classList.contains('hidden') ? '' : normalizeId(partnerIqamaInput.value),
     partnerGender: partnerSection.classList.contains('hidden') ? '' : partnerGenderInput.value.trim(),
     partnerDob: partnerSection.classList.contains('hidden') ? '' : partnerDobInput.value.trim(),
     partnerNationality: partnerSection.classList.contains('hidden') ? '' : partnerNationalityInput.value.trim()
   };
 
-  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL')) {
-    showError("Configuration Required: Please set SCRIPT_URL with your Google Apps Script Web App URL.");
-    setSubmittingState(false);
-    return;
-  }
-
   try {
-    const response = await fetch(SCRIPT_URL, {
+    const response = await fetch(API_ENDPOINT, {
       method: 'POST',
-      mode: 'cors',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
 
-    if (result && result.status === 'success') {
-      showSuccess();
+    if (response.ok && result && result.status === 'success') {
+      showSuccess(result, payload);
     } else {
-      showError(result.message || 'Server returned an error. Please try again.');
+      showError(result.message || `Server returned error (${response.status}). Please check your details and try again.`);
     }
   } catch (error) {
     console.error('Submission failed:', error);
-    showError(error.message || 'Unable to connect. Please verify internet connection and Apps Script deployment settings.');
+    showError(error.message || 'Unable to connect to the server. Please verify backend connection.');
   } finally {
     setSubmittingState(false);
   }
@@ -1026,7 +1332,41 @@ function setSubmittingState(isSubmitting) {
   }
 }
 
-function showSuccess() {
+function showSuccess(result, payload) {
+  const cardsContainer = document.getElementById('successPlayerCards');
+  const teamIdEl = document.getElementById('successTeamId');
+  const catFlightEl = document.getElementById('successCategoryFlight');
+  const mainNameEl = document.getElementById('successMainName');
+  const mainIdEl = document.getElementById('successMainId');
+  const partnerCard = document.getElementById('successPartnerCard');
+  const partnerNameEl = document.getElementById('successPartnerName');
+  const partnerIdEl = document.getElementById('successPartnerId');
+
+  const teamId = (result && result.teamId) || (result && result.data && result.data.teamId) || 'T1001';
+  const mainId = (result && result.playerId) || (result && result.data && result.data.playerId) || '----';
+  const partnerId = (result && result.partnerPlayerId) || (result && result.data && result.data.partnerPlayerId) || null;
+  const mainName = (payload && payload.name) || (result && result.data && result.data.name) || 'Player';
+  const partnerName = (payload && payload.partnerName) || (result && result.data && result.data.partnerName) || '';
+  const category = (payload && payload.category) || (result && result.data && result.data.category) || '';
+  const flight = (payload && payload.flight) || (result && result.data && result.data.flight) || '';
+
+  if (teamIdEl) teamIdEl.textContent = teamId;
+  if (catFlightEl) catFlightEl.textContent = category && flight ? `${category} • ${flight}` : category || flight || '';
+  if (mainNameEl) mainNameEl.textContent = mainName;
+  if (mainIdEl) mainIdEl.textContent = `#${mainId}`;
+
+  if (partnerCard) {
+    if (partnerId && partnerName) {
+      partnerCard.classList.remove('hidden');
+      if (partnerNameEl) partnerNameEl.textContent = partnerName;
+      if (partnerIdEl) partnerIdEl.textContent = `#${partnerId}`;
+    } else {
+      partnerCard.classList.add('hidden');
+    }
+  }
+
+  if (cardsContainer) cardsContainer.classList.remove('hidden');
+
   formPanel.classList.remove('active');
   setTimeout(() => {
     successPanel.classList.add('active');
@@ -1049,6 +1389,9 @@ resetBtn.addEventListener('click', () => {
   if (nationalityCombobox) nationalityCombobox.reset();
   if (partnerNationalityCombobox) partnerNationalityCombobox.reset();
 
+  if (dobNativePicker) dobNativePicker.value = '';
+  if (partnerDobNativePicker) partnerDobNativePicker.value = '';
+
   partnerSection.classList.add('hidden');
   updateCategoryAndAgeUI();
 
@@ -1070,6 +1413,7 @@ resetBtn.addEventListener('click', () => {
 window.addEventListener('DOMContentLoaded', () => {
   startIntroProgress();
   updateCategoryAndAgeUI();
+  fetchTournamentConfig();
 });
 
 

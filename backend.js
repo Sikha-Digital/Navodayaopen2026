@@ -52,10 +52,15 @@ function doPost(e) {
     // 2. Parse the JSON payload sent from the form
     const data = JSON.parse(e.postData.contents);
     
+    function normalizeId(val) {
+      if (!val) return '';
+      return String(val).replace(/[\s\-_]/g, '').toUpperCase();
+    }
+
     const name = data.name ? String(data.name).trim() : '';
     const phone = data.phone ? String(data.phone).trim() : '';
     const email = data.email ? String(data.email).trim() : '';
-    const iqama = data.iqama ? String(data.iqama).trim() : '';
+    const iqama = normalizeId(data.iqama);
     const gender = data.gender ? String(data.gender).trim() : '';
     const dob = data.dob ? String(data.dob).trim() : '';
     const nationality = data.nationality ? String(data.nationality).trim() : '';
@@ -64,7 +69,7 @@ function doPost(e) {
     const flight = data.flight ? String(data.flight).trim() : '';
     const partnerName = data.partnerName ? String(data.partnerName).trim() : '';
     const partnerPhone = data.partnerPhone ? String(data.partnerPhone).trim() : '';
-    const partnerIqama = data.partnerIqama ? String(data.partnerIqama).trim() : '';
+    const partnerIqama = normalizeId(data.partnerIqama);
     const partnerGender = data.partnerGender ? String(data.partnerGender).trim() : '';
     const partnerDob = data.partnerDob ? String(data.partnerDob).trim() : '';
     const partnerNationality = data.partnerNationality ? String(data.partnerNationality).trim() : '';
@@ -74,10 +79,20 @@ function doPost(e) {
       return jsonResponse('error', 'Validation failed. Please ensure all required fields are filled.');
     }
 
+    if (iqama.length < 5) {
+      return jsonResponse('error', 'Validation failed. Main player Iqama / ID number must be at least 5 characters.');
+    }
+
     const isDoubles = category.toLowerCase().includes('doubles') || category.length > 0;
     if (isDoubles) {
       if (!partnerName || !partnerPhone || !partnerIqama || !partnerGender || !partnerDob || !partnerNationality) {
         return jsonResponse('error', 'Validation failed. Partner details (Name, Contact, Iqama, Gender, DOB, Nationality) are required for doubles entries.');
+      }
+      if (partnerIqama.length < 5) {
+        return jsonResponse('error', 'Validation failed. Partner Iqama / ID number must be at least 5 characters.');
+      }
+      if (iqama === partnerIqama) {
+        return jsonResponse('error', 'Main player and Partner cannot have the same Iqama / ID number.');
       }
     }
 
@@ -146,34 +161,40 @@ function doPost(e) {
 
       function validatePlayerEntry(playerId, playerNameLabel) {
         if (!playerId) return null;
+        const normId = normalizeId(playerId);
 
         let categoryCount = 0;
         let existingFlights = [];
 
         for (let i = 0; i < rows.length; i++) {
-          const rowMainIqama = String(rows[i][4]).trim();
-          const rowPartnerIqama = String(rows[i][13]).trim();
+          const rowMainIqama = normalizeId(rows[i][4]);
+          const rowPartnerIqama = normalizeId(rows[i][13]);
           const rowCategory = String(rows[i][9]).trim();
           const rowFlight = String(rows[i][10]).trim();
 
-          const isMain = rowMainIqama === playerId;
-          const isPartner = rowPartnerIqama === playerId;
+          const isMain = rowMainIqama === normId;
+          const isPartner = rowPartnerIqama === normId;
 
           if (isMain || isPartner) {
             categoryCount++;
             existingFlights.push(rowFlight);
 
-            // A) Check exact duplicate (same category AND same level) for same player
-            if (rowCategory === category && rowFlight === flight) {
-              const role = isMain ? 'Main Player' : 'Co-Player / Partner';
-              return `Registration blocked: ${playerNameLabel} (Iqama/ID: ${playerId}) is already registered for "${category}" in level "${flight}" (as ${role}).`;
+            // A) Check exact duplicate: An individual shall not participate more than once—either as a main participant or a co-participant—at the same level within a category.
+            const targetCatLower = category.trim().toLowerCase();
+            const targetFlightLower = flight.trim().toLowerCase();
+            const rowCatLower = rowCategory.trim().toLowerCase();
+            const rowFlightLower = rowFlight.trim().toLowerCase();
+
+            if (rowCatLower === targetCatLower && rowFlightLower === targetFlightLower) {
+              const role = isMain ? 'Main Participant' : 'Co-Participant / Partner';
+              return `Registration blocked: An individual shall not participate more than once—either as a main participant or a co-participant—at the same level within a category. ${playerNameLabel} (Iqama/ID: ${normId}) is already registered for "${rowCategory}" in level "${rowFlight}" (as ${role}).`;
             }
           }
         }
 
-        // B) Check maximum 3 event categories per player (Main or Co-Player)
+        // B) Check maximum 3 event categories per player (Main or Co-Participant)
         if (categoryCount >= 3) {
-          return `Registration blocked: ${playerNameLabel} (Iqama/ID: ${playerId}) has already reached the maximum limit of 3 event category entries in this tournament (registered as Main Player or Co-Player).`;
+          return `Registration blocked: ${playerNameLabel} (Iqama/ID: ${normId}) has already reached the maximum limit of 3 event category entries in this tournament (registered as Main Participant or Co-Participant).`;
         }
 
         // C) Check nearest level requirement (within 1 flight step up or down of nearest existing entry)

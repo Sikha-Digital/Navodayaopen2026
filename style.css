@@ -497,6 +497,15 @@ input {
   user-select: none;
 }
 
+input::placeholder {
+  color: transparent;
+  transition: color var(--transition-speed) ease;
+}
+
+input:focus::placeholder {
+  color: rgba(148, 163, 184, 0.45);
+}
+
 /* Floating Label Logic */
 .input-wrapper label {
   position: absolute;
@@ -702,8 +711,148 @@ h2 {
   color: var(--text-secondary);
   font-size: 0.95rem;
   line-height: 1.6;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
+
+/* Success Team ID and Player ID Badges */
+.success-player-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 26px;
+  width: 100%;
+}
+
+.success-team-banner {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.success-team-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #2dd4bf);
+}
+
+.team-banner-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.team-banner-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+  margin-bottom: 2px;
+}
+
+.team-banner-val {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.team-banner-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.team-category-flight {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  text-align: right;
+  max-width: 180px;
+}
+
+.success-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.success-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--gradient-primary);
+}
+
+.player-card-role {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-secondary);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.player-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.player-card-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+.badge-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2dd4bf;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
 
 /* Reset / Secondary Button */
 .reset-btn {
@@ -821,6 +970,54 @@ h2 {
   color: var(--text-primary);
 }
 
+/* Calendar Date Picker Trigger Button */
+.calendar-btn {
+  position: absolute;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all var(--transition-speed) ease;
+  z-index: 3;
+}
+
+.calendar-btn:hover {
+  background-color: rgba(212, 175, 55, 0.15);
+  color: var(--accent-secondary);
+  transform: scale(1.08);
+}
+
+.calendar-btn:active {
+  transform: scale(0.95);
+}
+
+.calendar-btn svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+/* Hidden Native Datepicker bridge */
+.native-datepicker-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: none;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  z-index: -1;
+}
+
 /* Dropdown list floating menu */
 .dropdown-list {
   position: absolute;
@@ -901,10 +1098,13 @@ h2 {
   background: rgba(212, 175, 55, 0.45);
 }
 
-/* Mobile specific dropdown tweaks */
+/* Mobile specific dropdown and calendar tweaks */
 @media (max-width: 480px) {
   .dropdown-toggle {
     right: 12px;
+  }
+  .calendar-btn {
+    right: 10px;
   }
   .dropdown-list li {
     padding: 10px 12px;
