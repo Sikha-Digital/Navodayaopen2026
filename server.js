@@ -592,19 +592,110 @@ app.all('/api/test-email', async (req, res) => {
   }
 });
 
+// Explicit route for Admin Dashboard UI
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+});
+
 /**
- * List all registrations (Protected or Admin view)
+ * Admin Authentication Helper Middleware
  */
-app.get('/api/registrations', async (req, res) => {
+function requireAdminAuth(req, res, next) {
   const adminKey = req.headers['x-admin-key'] || req.query.key;
   const configuredKey = process.env.ADMIN_KEY;
 
   if (configuredKey && adminKey !== configuredKey) {
-    return res.status(401).json({ status: 'error', message: 'Unauthorized access.' });
+    return res.status(401).json({ status: 'error', message: 'Unauthorized access. Invalid or missing Admin Key.' });
   }
+  next();
+}
 
+/**
+ * Admin Key Verification Login Endpoint
+ * POST /api/admin/login
+ */
+app.post('/api/admin/login', (req, res) => {
+  const key = (req.body && req.body.key) || req.headers['x-admin-key'] || req.query.key;
+  const configuredKey = process.env.ADMIN_KEY;
+
+  if (configuredKey && key !== configuredKey) {
+    return res.status(401).json({ status: 'error', message: 'Invalid Admin Security Key.' });
+  }
+  res.json({ status: 'success', message: 'Authenticated successfully', authenticated: true });
+});
+
+/**
+ * Admin Dashboard High-Level Statistics
+ * GET /api/admin/stats
+ */
+app.get('/api/admin/stats', requireAdminAuth, async (req, res) => {
   try {
-    const result = await query('SELECT * FROM registrations ORDER BY id DESC');
+    const [totalRegs, uniquePlayers, categories, flights, doublesRes] = await Promise.all([
+      query('SELECT COUNT(*) as count FROM registrations'),
+      query('SELECT COUNT(*) as count FROM players'),
+      query('SELECT category, COUNT(*) as count FROM registrations GROUP BY category ORDER BY count DESC'),
+      query('SELECT flight, COUNT(*) as count FROM registrations GROUP BY flight ORDER BY count DESC'),
+      query("SELECT COUNT(*) as count FROM registrations WHERE LOWER(category) LIKE '%doubles%' OR partner_name IS NOT NULL")
+    ]);
+
+    const totalRegistrations = parseInt(totalRegs.rows[0].count, 10);
+    const totalPlayers = parseInt(uniquePlayers.rows[0].count, 10);
+    const doublesCount = parseInt(doublesRes.rows[0].count, 10);
+    const singlesCount = totalRegistrations - doublesCount;
+
+    res.json({
+      status: 'success',
+      data: {
+        totalRegistrations,
+        totalPlayers,
+        doublesCount,
+        singlesCount,
+        byCategory: categories.rows,
+        byFlight: flights.rows
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+/**
+ * List all registrations with Search and Filter support
+ * GET /api/admin/registrations
+ */
+app.get('/api/admin/registrations', requireAdminAuth, async (req, res) => {
+  try {
+    const { search, category, flight } = req.query;
+    let sql = 'SELECT * FROM registrations WHERE 1=1';
+    const params = [];
+
+    if (category && category !== 'All') {
+      params.push(category);
+      sql += ` AND category = $${params.length}`;
+    }
+    if (flight && flight !== 'All') {
+      params.push(flight);
+      sql += ` AND flight = $${params.length}`;
+    }
+    if (search && search.trim() !== '') {
+      params.push(`%${search.trim().toLowerCase()}%`);
+      const pIdx = params.length;
+      sql += ` AND (
+        LOWER(name) LIKE $${pIdx} OR 
+        LOWER(team_id) LIKE $${pIdx} OR 
+        LOWER(player_id) LIKE $${pIdx} OR 
+        LOWER(iqama) LIKE $${pIdx} OR 
+        LOWER(phone) LIKE $${pIdx} OR 
+        LOWER(email) LIKE $${pIdx} OR 
+        LOWER(club) LIKE $${pIdx} OR 
+        LOWER(partner_name) LIKE $${pIdx} OR 
+        LOWER(partner_player_id) LIKE $${pIdx} OR 
+        LOWER(partner_iqama) LIKE $${pIdx}
+      )`;
+    }
+
+    sql += ' ORDER BY id DESC';
+    const result = await query(sql, params);
     res.json({
       status: 'success',
       count: result.rows.length,
@@ -616,16 +707,144 @@ app.get('/api/registrations', async (req, res) => {
 });
 
 /**
- * Clear all registrations and players tables (Admin protected)
+ * Get single registration details
+ * GET /api/admin/registrations/:id
  */
-app.delete('/api/registrations', async (req, res) => {
-  const adminKey = req.headers['x-admin-key'] || req.query.key;
-  const configuredKey = process.env.ADMIN_KEY;
-
-  if (configuredKey && adminKey !== configuredKey) {
-    return res.status(401).json({ status: 'error', message: 'Unauthorized access.' });
+app.get('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query('SELECT * FROM registrations WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Registration entry not found' });
+    }
+    res.json({ status: 'success', data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
   }
+});
 
+/**
+ * Update registration entry details
+ * PUT /api/admin/registrations/:id
+ */
+app.put('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const d = req.body || {};
+
+    const check = await query('SELECT id FROM registrations WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Registration entry not found' });
+    }
+
+    const updateSql = `
+      UPDATE registrations SET
+        name = COALESCE($1, name),
+        phone = COALESCE($2, phone),
+        email = COALESCE($3, email),
+        iqama = COALESCE($4, iqama),
+        gender = COALESCE($5, gender),
+        dob = COALESCE($6, dob),
+        nationality = COALESCE($7, nationality),
+        club = COALESCE($8, club),
+        category = COALESCE($9, category),
+        flight = COALESCE($10, flight),
+        partner_name = $11,
+        partner_phone = $12,
+        partner_iqama = $13,
+        partner_gender = $14,
+        partner_dob = $15,
+        partner_nationality = $16
+      WHERE id = $17
+      RETURNING *
+    `;
+
+    const values = [
+      d.name || null, d.phone || null, d.email || null, d.iqama || null, d.gender || null, d.dob || null, d.nationality || null, d.club || null,
+      d.category || null, d.flight || null,
+      d.partner_name || null, d.partner_phone || null, d.partner_iqama || null,
+      d.partner_gender || null, d.partner_dob || null, d.partner_nationality || null,
+      id
+    ];
+
+    const result = await query(updateSql, values);
+    res.json({
+      status: 'success',
+      message: 'Registration entry updated successfully',
+      data: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+/**
+ * Delete individual registration
+ * DELETE /api/admin/registrations/:id
+ */
+app.delete('/api/admin/registrations/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query('DELETE FROM registrations WHERE id = $1 RETURNING id, team_id, name', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Registration entry not found.' });
+    }
+    res.json({
+      status: 'success',
+      message: `Registration #${id} (${result.rows[0].name}) successfully deleted.`,
+      deletedId: result.rows[0].id
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+/**
+ * Export all registrations as CSV file
+ * GET /api/admin/export-csv
+ */
+app.get('/api/admin/export-csv', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM registrations ORDER BY id ASC');
+    const rows = result.rows;
+
+    const headers = [
+      'ID', 'Team ID', 'Registered At',
+      'Player UID', 'Player Name', 'Phone', 'Email', 'Iqama/ID', 'Gender', 'DOB', 'Nationality', 'Club',
+      'Category', 'Flight/Level',
+      'Partner UID', 'Partner Name', 'Partner Phone', 'Partner Iqama/ID', 'Partner Gender', 'Partner DOB', 'Partner Nationality'
+    ];
+
+    function escapeCsv(val) {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    }
+
+    let csv = headers.join(',') + '\n';
+    for (const r of rows) {
+      const line = [
+        r.id, r.team_id, r.timestamp,
+        r.player_id, r.name, r.phone, r.email, r.iqama, r.gender, r.dob, r.nationality, r.club,
+        r.category, r.flight,
+        r.partner_player_id, r.partner_name, r.partner_phone, r.partner_iqama, r.partner_gender, r.partner_dob, r.partner_nationality
+      ].map(escapeCsv).join(',');
+      csv += line + '\n';
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="Navodaya_Open_Registrations_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+/**
+ * Clear all registrations and players tables (Admin protected)
+ * DELETE /api/registrations
+ */
+app.delete('/api/registrations', requireAdminAuth, async (req, res) => {
   try {
     await query('TRUNCATE TABLE registrations, players RESTART IDENTITY CASCADE;');
     res.json({
@@ -639,10 +858,13 @@ app.delete('/api/registrations', async (req, res) => {
 
 // Fallback all non-API GET routes to index.html
 app.get('*', (req, res) => {
+  if (req.path.startsWith('/admin')) {
+    return res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+  }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Auto initialize database tables and start server
+// Auto initialize database tables and start server locally or export for Vercel
 async function start() {
   try {
     if (process.env.DATABASE_URL) {
@@ -654,13 +876,17 @@ async function start() {
     console.error('[Startup Warning] Schema check failed on start:', err.message);
   }
 
-  app.listen(PORT, () => {
-    console.log(`=======================================================`);
-    console.log(` Navodaya Open 2026 Server running on port ${PORT}`);
-    console.log(` UI: http://localhost:${PORT}/`);
-    console.log(` Health: http://localhost:${PORT}/api/health`);
-    console.log(`=======================================================`);
-  });
+  if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+      console.log(`=======================================================`);
+      console.log(` Navodaya Open 2026 Server running on port ${PORT}`);
+      console.log(` UI: http://localhost:${PORT}/`);
+      console.log(` Health: http://localhost:${PORT}/api/health`);
+      console.log(`=======================================================`);
+    });
+  }
 }
 
 start();
+
+module.exports = app;

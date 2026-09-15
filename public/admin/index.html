@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navodaya Open 2026 - Admin Portal</title>
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Authentication Overlay -->
+  <div id="auth-modal" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2>Admin Authentication</h2>
+        <p>Navodaya Open 2026 Badminton Tournament Management</p>
+      </div>
+      <form id="auth-form" class="auth-form">
+        <div class="form-group">
+          <label for="admin-key-input">Admin Passcode / API Key</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" id="admin-key-input" placeholder="Enter your secret admin key..." required autocomplete="current-password">
+            <button type="button" id="toggle-password-btn" class="icon-btn-ghost"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+        <div id="auth-error-msg" class="auth-error hidden"></div>
+        <button type="submit" id="auth-submit-btn" class="btn btn-primary btn-full">
+          <span>Authenticate & Access Dashboard</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Container -->
+  <div id="dashboard-app" class="dashboard-layout hidden">
+    
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">Navodaya Open 2026</h1>
+          <span class="brand-subtitle">Registration Management Portal</span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button id="refresh-btn" class="btn btn-secondary" title="Refresh Registration Data">
+          <i class="fa-solid fa-rotate"></i>
+          <span>Refresh Data</span>
+        </button>
+        <button id="export-csv-btn" class="btn btn-success" title="Download Excel CSV File">
+          <i class="fa-solid fa-file-excel"></i>
+          <span>Export CSV</span>
+        </button>
+        <button id="logout-btn" class="btn btn-outline-danger" title="Sign Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Key Metrics Stats Cards -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-blue">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Total Registrations</span>
+            <h3 id="stat-total-regs" class="stat-value">--</h3>
+            <span class="stat-sub">Submitted Tournament Entries</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-emerald">
+            <i class="fa-solid fa-user-check"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Unique Players</span>
+            <h3 id="stat-total-players" class="stat-value">--</h3>
+            <span class="stat-sub">Distinct 4-Digit UIDs Assigned</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-purple">
+            <i class="fa-solid fa-user-group"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Doubles Teams</span>
+            <h3 id="stat-doubles-count" class="stat-value">--</h3>
+            <span class="stat-sub">Pairs Registered</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-amber">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Singles Entries</span>
+            <h3 id="stat-singles-count" class="stat-value">--</h3>
+            <span class="stat-sub">Individual Competitors</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Category & Level Summary Section -->
+      <section class="breakdown-section">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-chart-pie"></i> Category Breakdown</h3>
+          </div>
+          <div id="category-badges-container" class="badge-list">
+            <div class="badge-skeleton">Loading category metrics...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Registration Data Management Panel -->
+      <section class="card table-card">
+        <div class="card-header table-header-flex">
+          <div>
+            <h3><i class="fa-solid fa-list-check"></i> Registration Master Directory</h3>
+            <p id="table-subtitle" class="table-subtitle">Showing all entries</p>
+          </div>
+          <div class="search-filter-controls">
+            <!-- Search Input -->
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="search-input" placeholder="Search Name, Team ID, Player UID, Iqama, Phone...">
+              <button id="clear-search-btn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <!-- Category Filter -->
+            <div class="filter-box">
+              <select id="filter-category">
+                <option value="All">All Categories</option>
+              </select>
+            </div>
+            <!-- Flight Filter -->
+            <div class="filter-box">
+              <select id="filter-flight">
+                <option value="All">All Flights / Levels</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Table Wrapper -->
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Team / Entry</th>
+                <th>Main Participant</th>
+                <th>Co-Participant / Partner</th>
+                <th>Category & Level</th>
+                <th>Club</th>
+                <th>Registered Date</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="registrations-tbody">
+              <tr>
+                <td colspan="7" class="loading-state">
+                  <i class="fa-solid fa-spinner fa-spin"></i> Fetching registration records...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Detail / Edit Participant Modal -->
+  <div id="edit-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-title">Edit Registration Record</h3>
+          <span id="modal-subtitle" class="modal-subtitle">Team ID: T1001</span>
+        </div>
+        <button id="close-edit-modal-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <form id="edit-form" class="modal-body">
+        <input type="hidden" id="edit-reg-id">
+        
+        <!-- Main Participant Section -->
+        <div class="form-section-title">
+          <i class="fa-solid fa-user"></i> Main Participant Details
+        </div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Player UID</label>
+            <input type="text" id="edit-player-id" class="input-disabled" disabled>
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="edit-name" required>
+          </div>
+          <div class="form-group">
+            <label>Iqama / National ID</label>
+            <input type="text" id="edit-iqama" required>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="text" id="edit-phone" required>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="edit-email" required>
+          </div>
+          <div class="form-group">
+            <label>Club / Association</label>
+            <input type="text" id="edit-club">
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <select id="edit-gender">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="edit-dob">
+          </div>
+          <div class="form-group">
+            <label>Nationality</label>
+            <input type="text" id="edit-nationality">
+          </div>
+        </div>
+
+        <!-- Event Selection Section -->
+        <div class="form-section-title mt-4">
+          <i class="fa-solid fa-trophy"></i> Tournament Event & Level
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="edit-category" required></select>
+          </div>
+          <div class="form-group">
+            <label>Flight / Level</label>
+            <select id="edit-flight" required></select>
+          </div>
+        </div>
+
+        <!-- Co-Participant / Partner Section -->
+        <div class="form-section-title mt-4">
+          <i class="fa-solid fa-user-group"></i> Co-Participant / Partner Details (Doubles)
+        </div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Partner Player UID</label>
+            <input type="text" id="edit-partner-player-id" class="input-disabled" disabled>
+          </div>
+          <div class="form-group">
+            <label>Partner Full Name</label>
+            <input type="text" id="edit-partner-name">
+          </div>
+          <div class="form-group">
+            <label>Partner Iqama / ID</label>
+            <input type="text" id="edit-partner-iqama">
+          </div>
+          <div class="form-group">
+            <label>Partner Phone</label>
+            <input type="text" id="edit-partner-phone">
+          </div>
+          <div class="form-group">
+            <label>Partner Gender</label>
+            <select id="edit-partner-gender">
+              <option value="">None</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Partner Nationality</label>
+            <input type="text" id="edit-partner-nationality">
+          </div>
+        </div>
+
+        <div class="modal-footer mt-4">
+          <button type="button" id="cancel-edit-btn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="save-edit-btn" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Confirm Delete</h3>
+        <button id="close-delete-modal-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete registration <strong id="delete-target-info">#--</strong>?</p>
+        <p class="text-muted text-sm mt-2">This action will permanently delete this participant record from the tournament database.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-delete-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-delete-btn" class="btn btn-danger">
+          <i class="fa-solid fa-trash-can"></i> Delete Record
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
