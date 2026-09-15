@@ -10,7 +10,7 @@ let isInitialized = false;
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,DELETE,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key');
 
   if (req.method === 'OPTIONS') {
@@ -29,6 +29,15 @@ module.exports = async function handler(req, res) {
     if (!isInitialized) {
       await initDatabase();
       isInitialized = true;
+    }
+
+    // Handle clearing registrations & players tables
+    if (req.method === 'DELETE' || req.query.action === 'clear' || (req.body && req.body.action === 'clear')) {
+      await query('TRUNCATE TABLE registrations, players RESTART IDENTITY CASCADE;');
+      return res.status(200).json({
+        status: 'success',
+        message: 'Table registrations and players have been cleared and auto-increment sequences reset.'
+      });
     }
 
     const result = await query('SELECT * FROM registrations ORDER BY id DESC');

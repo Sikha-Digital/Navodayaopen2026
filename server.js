@@ -615,6 +615,28 @@ app.get('/api/registrations', async (req, res) => {
   }
 });
 
+/**
+ * Clear all registrations and players tables (Admin protected)
+ */
+app.delete('/api/registrations', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'] || req.query.key;
+  const configuredKey = process.env.ADMIN_KEY;
+
+  if (configuredKey && adminKey !== configuredKey) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized access.' });
+  }
+
+  try {
+    await query('TRUNCATE TABLE registrations, players RESTART IDENTITY CASCADE;');
+    res.json({
+      status: 'success',
+      message: 'Table registrations and players have been cleared and auto-increment sequences reset.'
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 // Fallback all non-API GET routes to index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
