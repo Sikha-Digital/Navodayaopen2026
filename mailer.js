@@ -87,14 +87,14 @@ function generateConfirmationEmailHtml(reg) {
     body {
       margin: 0;
       padding: 0;
-      background-color: #0b0f19;
+      background-color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: #e2e8f0;
       -webkit-font-smoothing: antialiased;
     }
     .wrapper {
       width: 100%;
-      background-color: #0b0f19;
+      background-color: #f1f5f9;
       padding: 30px 10px;
     }
     .container {
@@ -264,9 +264,9 @@ function generateConfirmationEmailHtml(reg) {
     }
   </style>
 </head>
-<body>
-  <div class="wrapper">
-    <div class="container">
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <div class="wrapper" style="width: 100%; background-color: #f1f5f9; padding: 30px 10px; box-sizing: border-box;">
+    <div class="container" style="max-width: 600px; margin: 0 auto; background-color: #131b2e; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.18); border: 1px solid rgba(255, 255, 255, 0.1);">
       
       <!-- Header -->
       <div class="header">
