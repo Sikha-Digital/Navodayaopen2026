@@ -540,6 +540,34 @@ body {
 /* Data Table */
 .table-responsive {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 68vh;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.6) rgba(15, 23, 42, 0.8);
+}
+
+/* Custom Visible Scrollbar for Admin Table */
+.table-responsive::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+  border-radius: 8px;
+  border: 2px solid rgba(15, 23, 42, 0.9);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
 }
 
 .data-table {
@@ -549,14 +577,17 @@ body {
 }
 
 .data-table th {
-  background: rgba(255, 255, 255, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #0f172a;
   padding: 12px 16px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
   white-space: nowrap;
 }
 
