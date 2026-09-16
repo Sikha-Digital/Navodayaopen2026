@@ -1363,11 +1363,11 @@ body {
   }
 
   .nav-actions {
+    display: flex;
+    align-items: flex-end;
     gap: 6px;
     flex-wrap: wrap;
-    align-items: flex-end;
     flex: 1;
-    justify-content: flex-end;
   }
 
   .nav-actions .btn {
