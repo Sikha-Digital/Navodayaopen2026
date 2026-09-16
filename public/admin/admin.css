@@ -51,7 +51,8 @@ body {
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.5;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* Helper Utilities */
@@ -259,13 +260,15 @@ body {
 
 /* Main Layout */
 .dashboard-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .top-nav {
-  height: 72px;
+  height: 60px;
+  flex-shrink: 0;
   background: rgba(11, 15, 25, 0.8);
   backdrop-filter: var(--glass-backdrop);
   border-bottom: 1px solid var(--border-color);
@@ -339,8 +342,9 @@ body {
 }
 
 .admin-footer {
+  flex-shrink: 0;
   text-align: center;
-  padding: 8px 0 12px;
+  padding: 6px 0 10px;
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 400;
@@ -432,18 +436,23 @@ body {
 
 .main-content {
   flex: 1;
-  padding: 16px 28px 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 28px 0;
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
+  overflow: hidden;
 }
 
 /* Stats Cards Grid */
 .stats-grid {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .stat-card {
@@ -502,8 +511,17 @@ body {
   backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 14px 18px;
-  margin-bottom: 12px;
+  padding: 12px 18px;
+  margin-bottom: 10px;
+}
+
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 4px;
+  overflow: hidden;
 }
 
 .card-header h3 {
@@ -517,12 +535,16 @@ body {
 .card-header h3 i { color: var(--primary); }
 
 /* Category Breakdown Single Line Layout */
+.breakdown-section {
+  flex-shrink: 0;
+}
+
 .category-breakdown-card {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 
@@ -694,10 +716,10 @@ body {
 
 /* Data Table */
 .table-responsive {
+  flex: 1;
+  min-height: 0;
   overflow-x: auto;
   overflow-y: auto;
-  max-height: calc(100vh - 365px);
-  min-height: 250px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
   scrollbar-width: thin;
