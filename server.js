@@ -773,7 +773,8 @@ app.get('/api/admin/stats', requireAdminAuth, async (req, res) => {
     const totalRegistrations = parseInt(totalRegs.rows[0].count, 10);
     const totalPlayers = parseInt(uniquePlayers.rows[0].count, 10);
     const doublesCount = parseInt(doublesRes.rows[0].count, 10);
-    const singlesCount = totalRegistrations - doublesCount;
+    const categoriesCount = categories.rows.length;
+    const flightsCount = flights.rows.length;
 
     res.json({
       status: 'success',
@@ -781,7 +782,8 @@ app.get('/api/admin/stats', requireAdminAuth, async (req, res) => {
         totalRegistrations,
         totalPlayers,
         doublesCount,
-        singlesCount,
+        categoriesCount,
+        flightsCount,
         byCategory: categories.rows,
         byFlight: flights.rows
       }

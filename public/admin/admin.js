@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const statTotalRegs = document.getElementById('stat-total-regs');
   const statTotalPlayers = document.getElementById('stat-total-players');
   const statDoublesCount = document.getElementById('stat-doubles-count');
-  const statSinglesCount = document.getElementById('stat-singles-count');
+  const statCategoriesCount = document.getElementById('stat-categories-count');
   const categoryBadgesContainer = document.getElementById('category-badges-container');
 
   // Search and Filter Elements
@@ -331,7 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
         statTotalRegs.textContent = s.totalRegistrations;
         statTotalPlayers.textContent = s.totalPlayers;
         statDoublesCount.textContent = s.doublesCount;
-        statSinglesCount.textContent = s.singlesCount;
+        if (statCategoriesCount) {
+          statCategoriesCount.textContent = s.categoriesCount !== undefined ? s.categoriesCount : (s.byCategory ? s.byCategory.length : 0);
+        }
 
         if (s.byCategory && s.byCategory.length > 0) {
           categoryBadgesContainer.innerHTML = s.byCategory.map(c => `
