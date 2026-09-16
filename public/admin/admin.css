@@ -1454,30 +1454,101 @@ body {
     height: 36px;
   }
 
-  /* Data Table Mobile Touch Optimization & Sticky Column */
+  /* Option 1: Mobile Card Layout (<= 768px) */
+  .data-table thead {
+    display: none !important;
+  }
+
   .table-responsive {
-    max-height: 480px;
-    -webkit-overflow-scrolling: touch;
+    max-height: none !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
   }
 
-  .data-table th,
+  .data-table,
+  .data-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  /* Each row transforms into a modern mobile card container */
+  .data-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--border-highlight);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    position: relative;
+  }
+
   .data-table td {
-    padding: 10px 12px;
-    font-size: 12px;
+    display: block;
+    padding: 0 !important;
+    border: none !important;
   }
 
-  /* Sticky First Column (Entry / Team ID) for horizontal scroll context */
-  .data-table th:first-child,
-  .data-table td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background: #0f172a;
-    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.4);
+  /* Top Bar of Mobile Card: Entry ID, Team ID & Badges */
+  .cell-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    margin-bottom: 2px;
   }
 
-  .data-table th:first-child {
-    z-index: 15;
+  /* Mobile Card Action Buttons (Edit / Delete) on Top Right */
+  .cell-actions {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+  }
+
+  .cell-actions .action-btn-group {
+    justify-content: flex-end;
+  }
+
+  /* Category & Flight Badges Row */
+  .cell-category {
+    margin-bottom: 2px;
+  }
+
+  .cell-category .cat-flight-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Main Participant Info Card Box */
+  .cell-main {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 8px 10px !important;
+  }
+
+  /* Co-Participant / Partner Info Card Box */
+  .cell-partner {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 8px 10px !important;
+  }
+
+  /* Club & Date Meta Footer Row */
+  .cell-club,
+  .cell-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
   }
 
   .admin-footer {

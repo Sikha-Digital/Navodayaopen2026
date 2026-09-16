@@ -513,14 +513,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }) : '--';
 
       return `
-        <tr>
-          <td>
+        <tr data-reg-id="${reg.id}">
+          <td class="cell-entry">
             <div class="entry-team-inline">
               <span class="entry-id-tag">#${reg.id}</span>
               <span class="badge-team">${teamIdStr}</span>
             </div>
           </td>
-          <td>
+          <td class="cell-main">
             <div class="player-info-cell">
               <span class="player-name">${escapeHtml(reg.name)} <span class="uid-tag">UID: ${playerUidStr}</span></span>
               <span class="player-meta">Iqama: <strong>${escapeHtml(reg.iqama || '--')}</strong></span>
@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="player-meta"><i class="fa-solid fa-envelope" style="font-size:10px;"></i> ${escapeHtml(reg.email || '--')}</span>
             </div>
           </td>
-          <td>
+          <td class="cell-partner">
             ${hasPartner ? `
               <div class="player-info-cell">
                 <span class="player-name">${escapeHtml(reg.partner_name)} <span class="uid-tag">UID: ${partnerUidStr}</span></span>
@@ -537,17 +537,19 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             ` : `<span class="text-muted text-sm">-- (Singles) --</span>`}
           </td>
-          <td>
-            <div><span class="badge-cat">${escapeHtml(reg.category || 'N/A')}</span></div>
-            <div><span class="badge-flight">${escapeHtml(reg.flight || 'N/A')}</span></div>
+          <td class="cell-category">
+            <div class="cat-flight-badges">
+              <span class="badge-cat">${escapeHtml(reg.category || 'N/A')}</span>
+              <span class="badge-flight">${escapeHtml(reg.flight || 'N/A')}</span>
+            </div>
           </td>
-          <td>
-            <span>${escapeHtml(reg.club || 'Independent')}</span>
+          <td class="cell-club">
+            <span class="club-val"><i class="fa-solid fa-building-flag" style="font-size:11px; opacity:0.7;"></i> ${escapeHtml(reg.club || 'Independent')}</span>
           </td>
-          <td>
-            <span class="text-muted text-sm">${formattedDate}</span>
+          <td class="cell-date">
+            <span class="text-muted text-sm date-val"><i class="fa-regular fa-clock" style="font-size:11px;"></i> ${formattedDate}</span>
           </td>
-          <td class="text-right">
+          <td class="cell-actions text-right">
             <div class="action-btn-group">
               ${canEdit ? `
                 <button class="action-btn action-btn-edit" onclick="openEditModal(${reg.id})" title="Edit Registration">
