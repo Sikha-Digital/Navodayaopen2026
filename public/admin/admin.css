@@ -306,33 +306,24 @@ body {
 .brand-text-group {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 3px;
   height: 44px;
-  padding: 1px 0;
 }
 .brand-title {
   font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.2;
   margin: 0;
   color: var(--text-main, #f8fafc);
 }
 .brand-subtitle {
-  font-size: 11px;
-  line-height: 1;
+  font-size: 11.5px;
+  line-height: 1.2;
   color: var(--text-muted);
   display: block;
   margin: 0;
-}
-.brand-powered {
-  font-size: 9.5px;
-  line-height: 1;
-  color: var(--text-muted);
-  opacity: 0.8;
-  margin: 0;
-  font-weight: 400;
-  letter-spacing: 0.03em;
 }
 .brand-sikha {
   font-weight: 500;
@@ -345,6 +336,16 @@ body {
 .brand-sikha .brand-rest {
   color: #cbd5e1;
   font-weight: 500;
+}
+
+.admin-footer {
+  text-align: center;
+  padding: 24px 0 32px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
 }
 
 .nav-actions {
