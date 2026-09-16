@@ -962,7 +962,7 @@ h2 {
   input[type="date"]:valid ~ label {
     left: 12px;
   }
-  .partner-card {
+  #partnerSection.partner-card {
     padding: 12px 10px;
     gap: 10px;
   }
@@ -1252,7 +1252,7 @@ h2 {
 }
 
 /* Partner Section Card Styling */
-.partner-card {
+#partnerSection.partner-card {
   background: rgba(212, 175, 55, 0.06);
   border: 1px dashed rgba(243, 208, 104, 0.35);
   border-radius: 16px;
