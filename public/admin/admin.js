@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearSearchBtn = document.getElementById('clear-search-btn');
   const filterCategory = document.getElementById('filter-category');
   const filterFlight = document.getElementById('filter-flight');
+  const resetFiltersBtn = document.getElementById('reset-filters-btn');
   const registrationsTbody = document.getElementById('registrations-tbody');
   const tableSubtitle = document.getElementById('table-subtitle');
 
@@ -180,6 +181,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   filterCategory.addEventListener('change', () => fetchRegistrations());
   filterFlight.addEventListener('change', () => fetchRegistrations());
+
+  if (resetFiltersBtn) {
+    resetFiltersBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      clearSearchBtn.classList.add('hidden');
+      filterCategory.value = 'All';
+      filterFlight.value = 'All';
+      fetchRegistrations();
+      showToast('All search and category filters reset', 'success');
+    });
+  }
 
   // Helper: Check if user has permission
   function hasPermission(perm) {
