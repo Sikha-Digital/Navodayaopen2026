@@ -515,6 +515,29 @@ body {
 }
 .card-header h3 i { color: var(--primary); }
 
+/* Category Breakdown Single Line Layout */
+.category-breakdown-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.category-breakdown-card .card-header {
+  flex-shrink: 0;
+}
+
+.category-breakdown-card .card-header h3 {
+  white-space: nowrap;
+}
+
+.category-breakdown-card .badge-list {
+  margin-top: 0;
+  flex: 1;
+}
+
 .badge-list {
   display: flex;
   flex-wrap: wrap;
