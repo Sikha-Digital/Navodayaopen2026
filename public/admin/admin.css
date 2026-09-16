@@ -345,15 +345,16 @@ body {
   gap: 12px;
 }
 
-/* Logged-In User Profile in Top Nav */
+/* Logged-In User Profile Container in Top Nav */
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-right: 10px;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  padding: 5px 14px;
+  border-radius: 20px;
+  margin-right: 8px;
 }
 .user-avatar {
   width: 32px;
@@ -383,19 +384,29 @@ body {
   line-height: 1;
   margin: 0;
 }
-.role-chip {
-  font-size: 8.5px;
-  font-weight: 500;
+.role-chip,
+#user-role-chip {
+  font-size: 8.5px !important;
+  font-weight: 500 !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: var(--amber, #fbbf24);
-  opacity: 0.85;
+  color: var(--amber, #fbbf24) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
   line-height: 1;
   margin: 0;
 }
-.role-badge-admin { background: rgba(245, 158, 11, 0.15); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; }
-.role-badge-manager { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; }
-.role-badge-viewer { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; }
+
+#user-role-chip.role-badge-admin { color: #fde047 !important; background: transparent !important; border: none !important; padding: 0 !important; }
+#user-role-chip.role-badge-manager { color: #c084fc !important; background: transparent !important; border: none !important; padding: 0 !important; }
+#user-role-chip.role-badge-viewer { color: #818cf8 !important; background: transparent !important; border: none !important; padding: 0 !important; }
+
+/* Role Badges for User Management Table */
+.role-badge-admin { background: rgba(245, 158, 11, 0.15); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 10px; }
+.role-badge-manager { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 10px; }
+.role-badge-viewer { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 10px; }
 
 .main-content {
   flex: 1;
