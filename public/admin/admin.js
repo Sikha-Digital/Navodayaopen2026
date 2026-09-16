@@ -48,9 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearSearchBtn = document.getElementById('clear-search-btn');
   const filterCategory = document.getElementById('filter-category');
   const filterFlight = document.getElementById('filter-flight');
+  const filterSort = document.getElementById('filter-sort');
   const resetFiltersBtn = document.getElementById('reset-filters-btn');
   const registrationsTbody = document.getElementById('registrations-tbody');
   const tableSubtitle = document.getElementById('table-subtitle');
+
+  let currentSortField = 'id';
+  let currentSortDir = 'desc';
 
   // Edit Modal Elements
   const editModal = document.getElementById('edit-modal');
@@ -182,14 +186,64 @@ document.addEventListener('DOMContentLoaded', () => {
   filterCategory.addEventListener('change', () => fetchRegistrations());
   filterFlight.addEventListener('change', () => fetchRegistrations());
 
+  if (filterSort) {
+    filterSort.addEventListener('change', () => {
+      const parts = filterSort.value.split('-');
+      currentSortField = parts[0] || 'id';
+      currentSortDir = parts[1] || 'desc';
+      updateHeaderSortIcons();
+      renderRegistrationsTable(allRegistrations);
+    });
+  }
+
+  // Clickable Column Header Sorting
+  document.querySelectorAll('.data-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const field = th.getAttribute('data-sort');
+      if (currentSortField === field) {
+        currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortField = field;
+        currentSortDir = 'asc';
+      }
+      if (filterSort) {
+        filterSort.value = `${currentSortField}-${currentSortDir}`;
+      }
+      updateHeaderSortIcons();
+      renderRegistrationsTable(allRegistrations);
+    });
+  });
+
+  function updateHeaderSortIcons() {
+    document.querySelectorAll('.data-table th.sortable').forEach(th => {
+      const field = th.getAttribute('data-sort');
+      const icon = th.querySelector('.sort-icon');
+      if (field === currentSortField) {
+        th.classList.add('active-sort');
+        if (icon) {
+          icon.className = `fa-solid fa-sort-${currentSortDir === 'asc' ? 'up' : 'down'} sort-icon`;
+        }
+      } else {
+        th.classList.remove('active-sort');
+        if (icon) {
+          icon.className = 'fa-solid fa-sort sort-icon';
+        }
+      }
+    });
+  }
+
   if (resetFiltersBtn) {
     resetFiltersBtn.addEventListener('click', () => {
       searchInput.value = '';
       clearSearchBtn.classList.add('hidden');
       filterCategory.value = 'All';
       filterFlight.value = 'All';
+      currentSortField = 'id';
+      currentSortDir = 'desc';
+      if (filterSort) filterSort.value = 'id-desc';
+      updateHeaderSortIcons();
       fetchRegistrations();
-      showToast('All search and category filters reset', 'success');
+      showToast('All search, category, and sort filters reset', 'success');
     });
   }
 
@@ -392,6 +446,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function sortRegistrationsList(list) {
+    return [...list].sort((a, b) => {
+      let valA, valB;
+      if (currentSortField === 'id') {
+        valA = Number(a.id || 0);
+        valB = Number(b.id || 0);
+      } else if (currentSortField === 'date' || currentSortField === 'timestamp') {
+        valA = new Date(a.timestamp || 0).getTime();
+        valB = new Date(b.timestamp || 0).getTime();
+      } else if (currentSortField === 'team') {
+        valA = String(a.team_id || a.id || '').toLowerCase();
+        valB = String(b.team_id || b.id || '').toLowerCase();
+      } else if (currentSortField === 'name') {
+        valA = String(a.name || '').toLowerCase();
+        valB = String(b.name || '').toLowerCase();
+      } else if (currentSortField === 'partner') {
+        valA = String(a.partner_name || '').toLowerCase();
+        valB = String(b.partner_name || '').toLowerCase();
+      } else if (currentSortField === 'category') {
+        valA = (String(a.category || '') + String(a.flight || '')).toLowerCase();
+        valB = (String(b.category || '') + String(b.flight || '')).toLowerCase();
+      } else if (currentSortField === 'club') {
+        valA = String(a.club || '').toLowerCase();
+        valB = String(b.club || '').toLowerCase();
+      } else {
+        valA = Number(a.id || 0);
+        valB = Number(b.id || 0);
+      }
+
+      if (valA < valB) return currentSortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return currentSortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
   // 5. Render Registration Directory Table
   function renderRegistrationsTable(list) {
     tableSubtitle.textContent = `Showing ${list.length} registration ${list.length === 1 ? 'entry' : 'entries'}`;
@@ -410,8 +499,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const canEdit = hasPermission('can_edit');
     const canDelete = hasPermission('can_delete');
+    const sortedList = sortRegistrationsList(list);
 
-    registrationsTbody.innerHTML = list.map(reg => {
+    registrationsTbody.innerHTML = sortedList.map(reg => {
       const teamIdStr = reg.team_id ? escapeHtml(reg.team_id) : `REG-${reg.id}`;
       const playerUidStr = reg.player_id ? escapeHtml(reg.player_id) : '--';
       const partnerUidStr = reg.partner_player_id ? escapeHtml(reg.partner_player_id) : '--';
@@ -425,8 +515,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return `
         <tr>
           <td>
-            <span class="badge-team">${teamIdStr}</span>
-            <div class="text-muted text-sm mt-1">#${reg.id}</div>
+            <div class="entry-team-inline">
+              <span class="entry-id-tag">#${reg.id}</span>
+              <span class="badge-team">${teamIdStr}</span>
+            </div>
           </td>
           <td>
             <div class="player-info-cell">

@@ -190,6 +190,20 @@
                 <option value="All">All Flights / Levels</option>
               </select>
             </div>
+            <!-- Sort Order Filter -->
+            <div class="filter-box">
+              <select id="filter-sort" title="Sort Order">
+                <option value="id-desc">Sort: Newest (# ↓)</option>
+                <option value="id-asc">Sort: Oldest (# ↑)</option>
+                <option value="name-asc">Sort: Name (A-Z)</option>
+                <option value="name-desc">Sort: Name (Z-A)</option>
+                <option value="team-asc">Sort: Team ID (A-Z)</option>
+                <option value="category-asc">Sort: Category</option>
+                <option value="club-asc">Sort: Club (A-Z)</option>
+                <option value="date-desc">Sort: Date (Newest)</option>
+                <option value="date-asc">Sort: Date (Oldest)</option>
+              </select>
+            </div>
             <!-- Reset All Filters Button -->
             <button id="reset-filters-btn" class="btn btn-secondary icon-square-btn" title="Reset All Filters">
               <i class="fa-solid fa-rotate-left"></i>
@@ -202,12 +216,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Team / Entry</th>
-                <th>Main Participant</th>
-                <th>Co-Participant / Partner</th>
-                <th>Category & Level</th>
-                <th>Club</th>
-                <th>Registered Date</th>
+                <th class="sortable active-sort" data-sort="id">Entry / Team <i class="fa-solid fa-sort-down sort-icon"></i></th>
+                <th class="sortable" data-sort="name">Main Participant <i class="fa-solid fa-sort sort-icon"></i></th>
+                <th class="sortable" data-sort="partner">Co-Participant / Partner <i class="fa-solid fa-sort sort-icon"></i></th>
+                <th class="sortable" data-sort="category">Category & Level <i class="fa-solid fa-sort sort-icon"></i></th>
+                <th class="sortable" data-sort="club">Club <i class="fa-solid fa-sort sort-icon"></i></th>
+                <th class="sortable" data-sort="date">Registered Date <i class="fa-solid fa-sort sort-icon"></i></th>
                 <th class="text-right">Actions</th>
               </tr>
             </thead>

@@ -722,6 +722,33 @@ body {
   white-space: nowrap;
 }
 
+.data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.data-table th.sortable:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.data-table th.sortable .sort-icon {
+  font-size: 11px;
+  margin-left: 5px;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.data-table th.sortable.active-sort {
+  color: #818cf8;
+}
+
+.data-table th.sortable.active-sort .sort-icon {
+  opacity: 1;
+  color: #818cf8;
+}
+
 .data-table td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-color);
@@ -735,11 +762,29 @@ body {
 }
 
 /* Custom Table Elements */
+.entry-team-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.entry-id-tag {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .badge-team {
   background: rgba(99, 102, 241, 0.15);
   color: #818cf8;
   border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
   font-family: monospace;
   font-size: 12px;
