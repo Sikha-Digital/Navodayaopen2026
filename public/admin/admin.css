@@ -672,7 +672,7 @@ body {
 .table-responsive {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 68vh;
+  max-height: 480px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
   scrollbar-width: thin;
