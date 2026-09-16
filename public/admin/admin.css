@@ -1337,7 +1337,7 @@ body {
     color: var(--text-muted);
     white-space: nowrap;
     opacity: 0.9;
-    margin-left: auto;
+    margin-left: 6px;
     padding-bottom: 5px;
     line-height: 1;
   }
@@ -1364,33 +1364,20 @@ body {
   }
 
   .nav-actions {
-    display: flex;
-    align-items: center;
     gap: 6px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    max-width: 100%;
-  }
-
-  .nav-actions::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap;
+    align-items: flex-end;
   }
 
   .nav-actions .btn {
     height: 34px;
     padding: 0 10px;
     font-size: 12px;
-    flex-shrink: 0;
-    white-space: nowrap;
   }
 
   .user-badge {
     height: 34px;
     padding: 2px 8px;
-    flex-shrink: 0;
-    white-space: nowrap;
   }
 
   .user-avatar {
