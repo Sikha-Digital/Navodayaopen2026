@@ -395,6 +395,8 @@ body {
 .brand-sikha {
   font-weight: 500;
   letter-spacing: 0.3px;
+  margin-left: 4px;
+  display: inline-block;
 }
 
 .brand-sikha .brand-s {
@@ -1300,7 +1302,9 @@ body {
 
 /* Comprehensive Mobile Responsiveness & Touch Optimization */
 @media (max-width: 768px) {
-  html, body {
+
+  html,
+  body {
     height: auto;
     min-height: 100vh;
     overflow-x: hidden;
@@ -1335,10 +1339,9 @@ body {
     color: var(--text-muted);
     white-space: nowrap;
     opacity: 0.9;
-    margin-left: auto;
+    margin-left: 6px;
     padding-bottom: 5px;
     line-height: 1;
-    text-align: right;
   }
 
   .admin-footer {
@@ -1363,11 +1366,9 @@ body {
   }
 
   .nav-actions {
-    display: flex;
-    align-items: flex-end;
     gap: 6px;
     flex-wrap: wrap;
-    flex: 1;
+    align-items: flex-end;
   }
 
   .nav-actions .btn {
