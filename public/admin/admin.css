@@ -345,28 +345,27 @@ body {
   gap: 12px;
 }
 
-/* Logged-In User Profile Badge in Top Nav */
+/* Logged-In User Profile in Top Nav */
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
-  padding: 6px 14px;
-  border-radius: 20px;
-  margin-right: 8px;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-right: 10px;
 }
 .user-avatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
   color: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 12px;
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -374,22 +373,23 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 34px;
-  padding: 2px 0;
+  height: 30px;
+  padding: 1px 0;
 }
 .user-name {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-main, #f8fafc);
   line-height: 1;
   margin: 0;
 }
 .role-chip {
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--amber, #fbbf24);
+  opacity: 0.85;
   line-height: 1;
   margin: 0;
 }
