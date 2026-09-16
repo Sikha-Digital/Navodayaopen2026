@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. Render Registration Directory Table
   function renderRegistrationsTable(list) {
-    tableSubtitle.textContent = `Showing ${list.length} registration entry${list.length === 1 ? '' : 's'}`;
+    tableSubtitle.textContent = `Showing ${list.length} registration ${list.length === 1 ? 'entry' : 'entries'}`;
 
     if (list.length === 0) {
       registrationsTbody.innerHTML = `
