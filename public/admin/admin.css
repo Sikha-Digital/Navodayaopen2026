@@ -1335,9 +1335,10 @@ body {
     color: var(--text-muted);
     white-space: nowrap;
     opacity: 0.9;
-    margin-left: 6px;
+    margin-left: auto;
     padding-bottom: 5px;
     line-height: 1;
+    text-align: right;
   }
 
   .admin-footer {
@@ -1365,6 +1366,8 @@ body {
     gap: 6px;
     flex-wrap: wrap;
     align-items: flex-end;
+    flex: 1;
+    justify-content: flex-end;
   }
 
   .nav-actions .btn {
