@@ -342,7 +342,18 @@ body {
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+.nav-actions .btn {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 /* Logged-In User Profile Container in Top Nav */
@@ -350,15 +361,17 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  height: 38px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
-  padding: 5px 14px;
+  padding: 0 14px;
   border-radius: 20px;
-  margin-right: 8px;
+  margin-right: 4px;
+  box-sizing: border-box;
 }
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
   color: #fff;
   border-radius: 50%;
@@ -366,7 +379,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11.5px;
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -374,7 +387,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 30px;
+  height: 28px;
   padding: 1px 0;
 }
 .user-name {
