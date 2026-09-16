@@ -714,6 +714,43 @@ h2 {
   margin-bottom: 20px;
 }
 
+.good-luck-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 16px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(56, 189, 248, 0.25) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.6);
+  border-radius: 20px;
+  color: #34d399;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.25);
+  animation: goodLuckPulse 2.2s ease-in-out infinite alternate;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes goodLuckPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.3), 0 0 2px rgba(52, 211, 153, 0.5);
+    border-color: rgba(52, 211, 153, 0.5);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 22px rgba(52, 211, 153, 0.6), 0 0 10px rgba(56, 189, 248, 0.8);
+    color: #6ee7b7;
+    border-color: rgba(56, 189, 248, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.3), 0 0 2px rgba(52, 211, 153, 0.5);
+    border-color: rgba(52, 211, 153, 0.5);
+  }
+}
+
 /* Success Team ID and Player ID Badges */
 .success-player-cards {
   display: flex;
