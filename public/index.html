@@ -59,7 +59,6 @@
             <div class="progress-bar" id="introProgressBar"></div>
           </div>
         </div>
-        <footer class="footer">Powered by&nbsp;<span class="brand-sikha"><span class="brand-s">S</span><span class="brand-rest">ikha</span></span></footer>
       </div>
     </div>
 
@@ -228,7 +227,7 @@
                 </svg>
                 <input type="text" id="dobInput" required placeholder=" " autocomplete="bday" maxlength="10" inputmode="numeric" data-placeholder="DD-MM-YYYY">
                 <label for="dobInput">Date of Birth</label>
-                <input type="date" id="dobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" tabindex="-1" aria-hidden="true">
+                <input type="date" id="dobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" aria-label="Select Date of Birth">
                 <button type="button" class="calendar-btn" id="dobPickerBtn" aria-label="Open Calendar Date Picker" title="Open Calendar">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -416,8 +415,8 @@
             </div>
           </div>
 
-          <!-- Dynamic Doubles Partner Section -->
-          <div id="partnerSection" class="partner-card hidden">
+          <!-- Doubles Partner Section (Always Visible) -->
+          <div id="partnerSection" class="partner-card">
             <div class="partner-header">
               <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -436,7 +435,7 @@
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                <input type="text" id="partnerNameInput" placeholder=" " autocomplete="off">
+                <input type="text" id="partnerNameInput" required placeholder=" " autocomplete="off">
                 <label for="partnerNameInput">Partner Full Name</label>
               </div>
               <span class="error-text" id="partnerNameError">Partner Name is required for Doubles</span>
@@ -551,7 +550,7 @@
                   </svg>
                   <input type="text" id="partnerDobInput" placeholder=" " autocomplete="off" maxlength="10" inputmode="numeric" data-placeholder="DD-MM-YYYY">
                   <label for="partnerDobInput">Date of Birth</label>
-                  <input type="date" id="partnerDobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" tabindex="-1" aria-hidden="true">
+                  <input type="date" id="partnerDobNativePicker" class="native-datepicker-hidden" max="2026-12-31" min="1920-01-01" aria-label="Select Partner Date of Birth">
                   <button type="button" class="calendar-btn" id="partnerDobPickerBtn" aria-label="Open Partner Calendar Date Picker" title="Open Calendar">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -665,7 +664,6 @@
           </div>
         </div>
       </form>
-      <footer class="footer">Powered by&nbsp;<span class="brand-sikha"><span class="brand-s">S</span><span class="brand-rest">ikha</span></span></footer>
     </div>
 
     <!-- Success Panel -->
@@ -682,7 +680,7 @@
       <p class="success-message">Thank you for registering. Your entry for the <strong>Navodaya Open 2026 International
           Badminton Tournament</strong> has been successfully recorded. Please check your inbox for a confirmation email containing the event details and tournament guidelines.
       </p>
-      <div style="margin-bottom: 22px; text-align: center;"><span class="good-luck-highlight">Good luck! 🏸✨</span></div>
+      <div class="good-luck-wrapper"><span class="good-luck-highlight">Good luck! 🏸✨</span></div>
 
       <!-- Dynamic Auto-Generated Team & Player IDs Box -->
       <div id="successPlayerCards" class="success-player-cards hidden">
@@ -724,9 +722,13 @@
       </a>
 
       <button id="resetBtn" class="reset-btn">Register Another Player</button>
-      <footer class="footer">Powered by&nbsp;<span class="brand-sikha"><span class="brand-s">S</span><span class="brand-rest">ikha</span></span></footer>
     </div>
   </div>
+
+  <!-- Dedicated Page Footer Outside Container -->
+  <footer class="page-footer" id="pageFooter">
+    <span class="footer-text">Powered by&nbsp;<span class="brand-sikha"><span class="brand-s">S</span><span class="brand-rest">ikha</span></span></span>
+  </footer>
 
   <!-- Floating WhatsApp Quick-Contact Button -->
   <a href="https://wa.me/966569407699?text=Hi%2C%20I%20have%20an%20inquiry%20regarding%20Navodaya%20Open%202026%20Badminton%20Tournament" target="_blank" rel="noopener noreferrer" class="whatsapp-float-btn" id="floatingWhatsAppBtn" aria-label="Contact Tournament Organizers on WhatsApp">

@@ -190,14 +190,14 @@ class SearchableCombobox {
         }
       } else if (e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
         if (this.isOpen) {
           if (this.highlightedIndex >= 0 && this.highlightedIndex < visibleItems.length) {
-            this.selectItem(visibleItems[this.highlightedIndex], true);
+            this.selectItem(visibleItems[this.highlightedIndex], false);
           } else if (visibleItems.length > 0) {
-            this.selectItem(visibleItems[0], true);
+            this.selectItem(visibleItems[0], false);
           } else {
             this.close();
-            if (typeof focusNextInput === 'function') focusNextInput(iEl);
           }
         } else {
           if (iEl.value.trim() !== '') {
@@ -277,14 +277,14 @@ class SearchableCombobox {
         const scrolled = listEl ? Math.abs(listEl.scrollTop - scrollTopAtStart) : 0;
         if (scrolled < 5) {
           e.preventDefault();
-          this.selectItem(item, true);
+          this.selectItem(item, false);
         }
       }, { passive: false });
 
       item.addEventListener('mousedown', (e) => {
         e.stopPropagation();
         e.preventDefault();
-        this.selectItem(item, true);
+        this.selectItem(item, false);
       });
     });
   }
@@ -369,7 +369,7 @@ class SearchableCombobox {
     iEl.dispatchEvent(new Event('blur'));
   }
 
-  selectItem(item, advanceFocus = true) {
+  selectItem(item, advanceFocus = false) {
     const iEl = this.input;
     if (!item || !iEl) return;
     const val = item.getAttribute('data-value');
@@ -662,10 +662,10 @@ function applyDateMask(input, onChangeCallback) {
 }
 
 /**
- * Date Picker Setup: binds a text DD-MM-YYYY input with hidden native datepicker and calendar trigger button
+ * Date Picker Setup: binds a text DD-MM-YYYY input with native datepicker bridge (works on iOS Safari, Android, Desktop)
  */
 function setupDatePicker(textInput, nativePicker, triggerBtn, onDateChanged) {
-  if (!textInput || !nativePicker || !triggerBtn) return;
+  if (!textInput || !nativePicker) return;
 
   // Sync text input (DD-MM-YYYY) to native picker (YYYY-MM-DD)
   function syncTextToNative() {
@@ -676,37 +676,47 @@ function setupDatePicker(textInput, nativePicker, triggerBtn, onDateChanged) {
     }
   }
 
-  // Trigger calendar open on button click
-  triggerBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    syncTextToNative();
-    if (typeof nativePicker.showPicker === 'function') {
-      try {
-        nativePicker.showPicker();
-      } catch (err) {
-        nativePicker.focus();
+  // Pre-sync when user focuses or touches the datepicker
+  nativePicker.addEventListener('focus', syncTextToNative);
+  nativePicker.addEventListener('touchstart', syncTextToNative, { passive: true });
+  nativePicker.addEventListener('mousedown', syncTextToNative);
+
+  // If button clicked directly (desktop / keyboard)
+  if (triggerBtn) {
+    triggerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      syncTextToNative();
+      if (typeof nativePicker.showPicker === 'function') {
+        try {
+          nativePicker.showPicker();
+        } catch (err) {
+          nativePicker.click();
+        }
+      } else {
         nativePicker.click();
       }
-    } else {
-      nativePicker.focus();
-      nativePicker.click();
-    }
-  });
+    });
+  }
 
-  // When date is selected from calendar picker
-  nativePicker.addEventListener('change', () => {
+  // When date is selected from calendar picker (handles both 'change' and 'input' for iOS/Android/Desktop)
+  const handleDateSelection = () => {
     if (nativePicker.value) {
-      const [y, m, d] = nativePicker.value.split('-');
-      textInput.value = `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
-      textInput.classList.add('touched');
-      textInput.dispatchEvent(new Event('input', { bubbles: true }));
-      textInput.dispatchEvent(new Event('change', { bubbles: true }));
-      if (typeof onDateChanged === 'function') {
-        onDateChanged();
+      const parts = nativePicker.value.split('-');
+      if (parts.length === 3) {
+        const [y, m, d] = parts;
+        textInput.value = `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
+        textInput.classList.add('touched');
+        textInput.dispatchEvent(new Event('input', { bubbles: true }));
+        textInput.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof onDateChanged === 'function') {
+          onDateChanged();
+        }
       }
     }
-  });
+  };
+
+  nativePicker.addEventListener('change', handleDateSelection);
+  nativePicker.addEventListener('input', handleDateSelection);
 }
 
 /**
@@ -923,35 +933,17 @@ function checkDoublesCategory() {
   initComboboxes();
 
   const val = categoryInput.value.trim();
-  const isDoubles = val.toLowerCase().includes('doubles') || val.toLowerCase().includes('kids') || val.length > 0;
 
-  if (isDoubles) {
+  // Partner section is always visible
+  if (partnerSection) {
     partnerSection.classList.remove('hidden');
-    partnerNameInput.setAttribute('required', 'required');
-    partnerPhoneInput.setAttribute('required', 'required');
-    partnerIqamaInput.setAttribute('required', 'required');
-    partnerGenderInput.setAttribute('required', 'required');
-    partnerDobInput.setAttribute('required', 'required');
-    partnerNationalityInput.setAttribute('required', 'required');
-  } else {
-    partnerSection.classList.add('hidden');
-    [partnerNameInput, partnerPhoneInput, partnerIqamaInput, partnerGenderInput, partnerDobInput, partnerNationalityInput].forEach(inp => {
-      inp.removeAttribute('required');
-      inp.value = '';
-      inp.classList.remove('touched');
-    });
-    partnerGenderCombobox.reset();
-    partnerGenderCombobox.enable();
-    if (partnerNationalityCombobox) {
-      partnerNationalityCombobox.reset();
-      partnerNationalityCombobox.enable();
-    }
-    ['partnerNameError', 'partnerPhoneError', 'partnerIqamaError', 'partnerGenderError', 'partnerDobError', 'partnerNationalityError'].forEach(errId => {
-      const el = document.getElementById(errId);
-      if (el) el.textContent = '';
-    });
-    return;
   }
+  partnerNameInput.setAttribute('required', 'required');
+  partnerPhoneInput.setAttribute('required', 'required');
+  partnerIqamaInput.setAttribute('required', 'required');
+  partnerGenderInput.setAttribute('required', 'required');
+  partnerDobInput.setAttribute('required', 'required');
+  partnerNationalityInput.setAttribute('required', 'required');
 
   // Auto-set & LOCK partner gender based on category and primary player gender
   const primaryGender = genderInput.value.trim();
@@ -1389,6 +1381,11 @@ partnerNationalityInput.addEventListener('input', () => {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  // Guard against submission while still on Step 1
+  if (step1 && step1.classList.contains('active')) {
+    return;
+  }
+
   generalError.classList.add('hidden');
 
   const isStep1Valid = validateStep1();
@@ -1556,7 +1553,7 @@ function resetToIntro() {
   if (dobNativePicker) dobNativePicker.value = '';
   if (partnerDobNativePicker) partnerDobNativePicker.value = '';
 
-  if (partnerSection) partnerSection.classList.add('hidden');
+  if (partnerSection) partnerSection.classList.remove('hidden');
   updateCategoryAndAgeUI();
 
   [nameInput, phoneInput, emailInput, iqamaInput, genderInput, dobInput, nationalityInput, clubInput, categoryInput, flightInput, partnerNameInput, partnerPhoneInput, partnerIqamaInput, partnerGenderInput, partnerDobInput, partnerNationalityInput].forEach(inp => {
@@ -1609,7 +1606,7 @@ function closeAllComboboxes() {
 
 /**
  * Fast Keyboard Navigation & Enter-Key Behavior
- * Allows operators to rapidly type and advance focus through form fields using the Enter key.
+ * Allows operators to rapidly type and advance focus through form fields within each step.
  */
 function focusNextInput(currentInput) {
   if (!currentInput) return;
@@ -1641,18 +1638,10 @@ function focusNextInput(currentInput) {
         nationalityCombobox.open();
       }
     } else if (idx === step1Inputs.length - 1 || currentInput === clubInput) {
-      // Last field in Step 1 -> advance to Step 2
-      if (validateStep1()) {
-        goToStep(2);
-      } else {
-        const invalidInput = step1Inputs.find(inp => {
-          if (inp.classList.contains('touched')) {
-            const errSpan = inp.closest('.input-group')?.querySelector('.error-text');
-            return errSpan && errSpan.textContent.trim() !== '';
-          }
-          return false;
-        });
-        if (invalidInput) invalidInput.focus();
+      // Last field in Step 1 (City / Club name):
+      // Move focus to Next button without automatically switching steps
+      if (nextStepBtn) {
+        nextStepBtn.focus();
       }
     }
   } else if (isStep2Active) {
@@ -1690,10 +1679,10 @@ function focusNextInput(currentInput) {
         partnerNationalityCombobox.open();
       }
     } else if (idx === validInputs.length - 1 || currentInput === validInputs[validInputs.length - 1]) {
-      // Last field in Step 2 -> trigger submission
-      if (submitBtn && !submitBtn.disabled) {
+      // Last field in Step 2:
+      // Move focus to Submit button without automatically submitting
+      if (submitBtn) {
         submitBtn.focus();
-        submitBtn.click();
       }
     }
   }
@@ -1720,6 +1709,20 @@ function focusNextInput(currentInput) {
     }
   });
 });
+
+// Prevent Enter key in form inputs and dropdowns from triggering implicit form submissions
+if (form) {
+  form.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT')) {
+        if (target.type !== 'submit') {
+          e.preventDefault();
+        }
+      }
+    }
+  });
+}
 
 // Bind Enter key on country code selectors to move focus to phone
 const countryCodeSelect = document.getElementById('countryCodeSelect');
