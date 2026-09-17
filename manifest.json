@@ -1,0 +1,76 @@
+{
+  "name": "Navodaya Open 2026 - International Badminton Tournament",
+  "short_name": "Navo Open 2026",
+  "description": "Official player registration & tournament schedule portal for Navodaya Open 2026 International Doubles Championship.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070d1e",
+  "theme_color": "#070d1e",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "sports",
+    "events",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://res.cloudinary.com/dfciyxbjo/image/upload/v1789506116/fav_icon_x5apkk.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Register Now",
+      "short_name": "Register",
+      "description": "Register for Navodaya Open 2026 Badminton Tournament",
+      "url": "/?action=register",
+      "icons": [
+        {
+          "src": "/favicon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Admin Portal",
+      "short_name": "Admin",
+      "description": "Tournament Administration Portal",
+      "url": "/admin",
+      "icons": [
+        {
+          "src": "/favicon.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

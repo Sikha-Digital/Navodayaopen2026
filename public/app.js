@@ -1801,6 +1801,97 @@ window.addEventListener('DOMContentLoaded', () => {
   startIntroProgress();
   updateCategoryAndAgeUI();
   fetchTournamentConfig();
+  updateOnlineStatus();
 });
+
+// ==========================================
+// Progressive Web App (PWA) Management
+// ==========================================
+
+// 1. Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          }
+        });
+      })
+      .catch((err) => {
+        console.warn('PWA Service Worker registration skipped or failed:', err);
+      });
+  });
+}
+
+// 2. PWA Install Prompt Logic
+let deferredInstallPrompt = null;
+const pwaInstallBanner = document.getElementById('pwaInstallBanner');
+const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+const pwaDismissBtn = document.getElementById('pwaDismissBtn');
+const offlineToast = document.getElementById('offlineToast');
+
+const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+
+  if (!isRunningStandalone && !sessionStorage.getItem('pwa_dismissed')) {
+    if (pwaInstallBanner) {
+      setTimeout(() => {
+        pwaInstallBanner.classList.remove('hidden');
+      }, 1200);
+    }
+  }
+});
+
+if (pwaInstallBtn) {
+  pwaInstallBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    if (pwaInstallBanner) pwaInstallBanner.classList.add('hidden');
+    deferredInstallPrompt.prompt();
+    try {
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        deferredInstallPrompt = null;
+      }
+    } catch (err) {
+      console.warn('PWA Install choice error:', err);
+    }
+  });
+}
+
+if (pwaDismissBtn) {
+  pwaDismissBtn.addEventListener('click', () => {
+    if (pwaInstallBanner) pwaInstallBanner.classList.add('hidden');
+    sessionStorage.setItem('pwa_dismissed', 'true');
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  if (pwaInstallBanner) pwaInstallBanner.classList.add('hidden');
+});
+
+// 3. Network Online/Offline Indicators
+function updateOnlineStatus() {
+  if (!offlineToast) return;
+  if (!navigator.onLine) {
+    offlineToast.classList.remove('hidden');
+  } else {
+    offlineToast.classList.add('hidden');
+  }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
 
 
