@@ -30,6 +30,11 @@ app.get('/manifest.json', (req, res) => {
   res.sendFile(path.join(__dirname, 'manifest.json'));
 });
 
+app.get('/admin/admin.webmanifest', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.sendFile(path.join(__dirname, 'public', 'admin', 'admin.webmanifest'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 

@@ -1100,4 +1100,66 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+
+  // 11. Progressive Web App (PWA) Features & Service Worker
+  let deferredInstallPrompt = null;
+  const pwaInstallBtn = document.getElementById('pwa-install-btn');
+  const offlineBanner = document.getElementById('offline-banner');
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+          console.log('[Admin PWA] Service Worker registered successfully with scope:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[Admin PWA] Service Worker registration failed:', err);
+        });
+    });
+  }
+
+  // Handle PWA Install Prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (pwaInstallBtn) {
+      pwaInstallBtn.classList.remove('hidden');
+    }
+  });
+
+  if (pwaInstallBtn) {
+    pwaInstallBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      console.log('[Admin PWA] User install choice outcome:', outcome);
+      deferredInstallPrompt = null;
+      pwaInstallBtn.classList.add('hidden');
+      if (outcome === 'accepted') {
+        showToast('Admin Portal App installed successfully!', 'success');
+      }
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    if (pwaInstallBtn) pwaInstallBtn.classList.add('hidden');
+    showToast('Navo Admin App added to Home Screen!', 'success');
+  });
+
+  // Handle Online / Offline Status
+  function updateOnlineStatus() {
+    if (!offlineBanner) return;
+    if (navigator.onLine) {
+      offlineBanner.classList.add('hidden');
+    } else {
+      offlineBanner.classList.remove('hidden');
+      showToast('You are currently offline. Viewing cached data.', 'warning');
+    }
+  }
+
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  if (!navigator.onLine) updateOnlineStatus();
 });

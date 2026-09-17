@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Navodaya Open 2026 - Admin Portal</title>
   <!-- Progressive Web App (PWA) Meta & Manifest -->
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#070d1e">
+  <link rel="manifest" href="/admin/admin.webmanifest">
+  <meta name="theme-color" content="#0b0f19">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Navo Admin">
   <!-- Favicon / Tab Icon -->
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="shortcut icon" type="image/png" href="/favicon.png">
@@ -90,6 +91,11 @@
           </div>
         </div>
 
+        <!-- PWA Install App Button -->
+        <button id="pwa-install-btn" class="btn btn-emerald hidden" title="Install Admin Portal PWA App">
+          <i class="fa-solid fa-download"></i>
+          <span>Install App</span>
+        </button>
         <button id="users-mgmt-btn" class="btn btn-warning hidden" title="Manage Users & Permissions">
           <i class="fa-solid fa-users-gear"></i>
           <span>User Management</span>
@@ -110,6 +116,12 @@
         <div class="mobile-powered">Powered by&nbsp;<span class="brand-sikha"><span class="brand-s">S</span><span class="brand-rest">ikha</span></span></div>
       </div>
     </header>
+
+    <!-- Offline Notification Banner -->
+    <div id="offline-banner" class="offline-banner hidden">
+      <i class="fa-solid fa-wifi-slash"></i>
+      <span>You are currently offline. Viewing cached registration data.</span>
+    </div>
 
     <!-- Main Content Area -->
     <main class="main-content">

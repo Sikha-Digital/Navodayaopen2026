@@ -3,7 +3,7 @@
  * Provides offline caching, lightning-fast loads, and seamless app installation.
  */
 
-const CACHE_NAME = 'navo-open-v2026.1';
+const CACHE_NAME = 'navo-open-v2026.2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -14,7 +14,13 @@ const STATIC_ASSETS = [
   '/fav_icon.png',
   '/favicon.ico',
   '/navodaya_open_logo.png',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap',
+  '/admin',
+  '/admin/index.html',
+  '/admin/admin.css',
+  '/admin/admin.js',
+  '/admin/admin.webmanifest',
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
   'https://res.cloudinary.com/dfciyxbjo/image/upload/v1789324461/logo_open_ralqqy.png',
   'https://res.cloudinary.com/dfciyxbjo/image/upload/v1789506116/fav_icon_x5apkk.png'
 ];
@@ -23,7 +29,6 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use catch on individual files to prevent one missing asset from failing the whole SW install
       return Promise.allSettled(
         STATIC_ASSETS.map((url) =>
           fetch(url, { mode: url.startsWith('http') ? 'cors' : 'same-origin' })
@@ -92,8 +97,11 @@ self.addEventListener('fetch', (event) => {
           return networkRes;
         })
         .catch(() => {
-          // If network fails and no cache exists for HTML page, fallback to cached index.html
+          // If network fails and no cache exists for HTML page, fallback to cached page
           if (req.headers.get('accept')?.includes('text/html')) {
+            if (url.pathname.startsWith('/admin')) {
+              return caches.match('/admin/index.html') || caches.match('/admin');
+            }
             return caches.match('/index.html') || caches.match('/');
           }
         });

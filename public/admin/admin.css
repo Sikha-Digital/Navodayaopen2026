@@ -199,8 +199,33 @@ body {
   background: var(--danger-hover);
 }
 
+.btn-emerald {
+  background: var(--emerald);
+  color: #fff;
+  border-color: var(--emerald);
+}
+
+.btn-emerald:hover {
+  background: #059669;
+  border-color: #059669;
+  box-shadow: 0 0 15px var(--emerald-glow);
+}
+
 .btn-full {
   width: 100%;
+}
+
+.offline-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
 }
 
 .icon-btn-ghost {
