@@ -753,15 +753,37 @@
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" class="pwa-install-banner hidden">
     <div class="pwa-banner-content">
-      <img src="/favicon.png" alt="Navo Open Icon" class="pwa-banner-icon">
+      <img src="/fav_icon.png" alt="Navo Open Icon" class="pwa-banner-icon">
       <div class="pwa-banner-text">
         <strong>Install Navo Open App</strong>
-        <span>Fast access & offline registration</span>
+        <span>1-Tap home screen access & offline use</span>
       </div>
     </div>
     <div class="pwa-banner-actions">
       <button type="button" id="pwaInstallBtn" class="pwa-install-btn">Install</button>
       <button type="button" id="pwaDismissBtn" class="pwa-dismiss-btn" aria-label="Dismiss Install Banner">&times;</button>
+    </div>
+  </div>
+
+  <!-- PWA Step-by-Step Guide Modal (for iOS Safari and mobile browsers) -->
+  <div id="pwaGuideModal" class="modal-overlay hidden">
+    <div class="pwa-guide-card">
+      <div class="pwa-guide-header">
+        <div class="pwa-guide-title">
+          <img src="/fav_icon.png" alt="Navo Open Icon" class="pwa-guide-icon">
+          <div>
+            <h3>Install Navo Open 2026</h3>
+            <p>Add to your home screen for app experience</p>
+          </div>
+        </div>
+        <button type="button" id="closePwaGuideBtn" class="modal-close-btn" aria-label="Close Guide">&times;</button>
+      </div>
+      <div class="pwa-guide-body" id="pwaGuideBody">
+        <!-- Dynamically injected based on iOS or Android/Desktop -->
+      </div>
+      <div class="pwa-guide-footer">
+        <button type="button" id="pwaGuideDoneBtn" class="submit-btn" style="padding: 10px 16px; font-size: 0.9rem; margin: 0; width: 100%;">Got it!</button>
+      </div>
     </div>
   </div>
 

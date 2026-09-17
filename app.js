@@ -1830,40 +1830,128 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// 2. PWA Install Prompt Logic
+// 2. Cross-Platform PWA Installation Logic
 let deferredInstallPrompt = null;
 const pwaInstallBanner = document.getElementById('pwaInstallBanner');
 const pwaInstallBtn = document.getElementById('pwaInstallBtn');
 const pwaDismissBtn = document.getElementById('pwaDismissBtn');
+const pwaGuideModal = document.getElementById('pwaGuideModal');
+const pwaGuideBody = document.getElementById('pwaGuideBody');
+const closePwaGuideBtn = document.getElementById('closePwaGuideBtn');
+const pwaGuideDoneBtn = document.getElementById('pwaGuideDoneBtn');
 const offlineToast = document.getElementById('offlineToast');
 
 const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+// Auto-show install banner on mobile after page loads if not already in standalone mode
+function initInstallBanner() {
+  if (isRunningStandalone || sessionStorage.getItem('pwa_dismissed')) {
+    return;
+  }
+  if (pwaInstallBanner) {
+    setTimeout(() => {
+      pwaInstallBanner.classList.remove('hidden');
+    }, 1000);
+  }
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
-
-  if (!isRunningStandalone && !sessionStorage.getItem('pwa_dismissed')) {
-    if (pwaInstallBanner) {
-      setTimeout(() => {
-        pwaInstallBanner.classList.remove('hidden');
-      }, 1200);
-    }
-  }
+  initInstallBanner();
 });
+
+// For iOS and mobile browsers where beforeinstallprompt doesn't fire automatically
+if (!isRunningStandalone) {
+  setTimeout(initInstallBanner, 1200);
+}
+
+function openPwaGuide() {
+  if (!pwaGuideModal || !pwaGuideBody) return;
+
+  if (isIosDevice) {
+    pwaGuideBody.innerHTML = `
+      <ul class="pwa-step-list">
+        <li class="pwa-step-item">
+          <div class="pwa-step-num">1</div>
+          <div class="pwa-step-desc">
+            Tap the <strong>Share button</strong>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+              <polyline points="16 6 12 2 8 6"></polyline>
+              <line x1="12" y1="2" x2="12" y2="15"></line>
+            </svg>
+            at the bottom of Safari.
+          </div>
+        </li>
+        <li class="pwa-step-item">
+          <div class="pwa-step-num">2</div>
+          <div class="pwa-step-desc">
+            Scroll down and select <strong>"Add to Home Screen"</strong>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>.
+          </div>
+        </li>
+        <li class="pwa-step-item">
+          <div class="pwa-step-num">3</div>
+          <div class="pwa-step-desc">
+            Tap <strong>"Add"</strong> in the top-right corner to launch anytime from your home screen.
+          </div>
+        </li>
+      </ul>
+    `;
+  } else {
+    pwaGuideBody.innerHTML = `
+      <ul class="pwa-step-list">
+        <li class="pwa-step-item">
+          <div class="pwa-step-num">1</div>
+          <div class="pwa-step-desc">
+            Tap the <strong>menu icon</strong> (three dots <strong>&vellip;</strong>) in Chrome browser.
+          </div>
+        </li>
+        <li class="pwa-step-item">
+          <div class="pwa-step-num">2</div>
+          <div class="pwa-step-desc">
+            Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.
+          </div>
+        </li>
+        <li class="pwa-step-item">
+          <div class="pwa-step-num">3</div>
+          <div class="pwa-step-desc">
+            Confirm <strong>"Install"</strong> to add the tournament app icon to your phone.
+          </div>
+        </li>
+      </ul>
+    `;
+  }
+
+  pwaGuideModal.classList.remove('hidden');
+}
+
+function closePwaGuide() {
+  if (pwaGuideModal) pwaGuideModal.classList.add('hidden');
+}
 
 if (pwaInstallBtn) {
   pwaInstallBtn.addEventListener('click', async () => {
-    if (!deferredInstallPrompt) return;
     if (pwaInstallBanner) pwaInstallBanner.classList.add('hidden');
-    deferredInstallPrompt.prompt();
-    try {
-      const choice = await deferredInstallPrompt.userChoice;
-      if (choice && choice.outcome === 'accepted') {
-        deferredInstallPrompt = null;
+
+    if (deferredInstallPrompt) {
+      try {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          deferredInstallPrompt = null;
+        }
+      } catch (err) {
+        openPwaGuide();
       }
-    } catch (err) {
-      console.warn('PWA Install choice error:', err);
+    } else {
+      openPwaGuide();
     }
   });
 }
@@ -1875,9 +1963,18 @@ if (pwaDismissBtn) {
   });
 }
 
+if (closePwaGuideBtn) closePwaGuideBtn.addEventListener('click', closePwaGuide);
+if (pwaGuideDoneBtn) pwaGuideDoneBtn.addEventListener('click', closePwaGuide);
+if (pwaGuideModal) {
+  pwaGuideModal.addEventListener('click', (e) => {
+    if (e.target === pwaGuideModal) closePwaGuide();
+  });
+}
+
 window.addEventListener('appinstalled', () => {
   deferredInstallPrompt = null;
   if (pwaInstallBanner) pwaInstallBanner.classList.add('hidden');
+  closePwaGuide();
 });
 
 // 3. Network Online/Offline Indicators
@@ -1892,6 +1989,7 @@ function updateOnlineStatus() {
 
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
+
 
 
 
