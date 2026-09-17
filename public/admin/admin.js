@@ -10,6 +10,34 @@ document.addEventListener('DOMContentLoaded', () => {
   // State
   let currentToken = localStorage.getItem(STORAGE_AUTH_TOKEN) || sessionStorage.getItem(STORAGE_AUTH_TOKEN) || '';
   let currentUser = JSON.parse(localStorage.getItem(STORAGE_USER_PROFILE) || sessionStorage.getItem(STORAGE_USER_PROFILE) || 'null');
+
+  // Centralized Authenticated Fetch Helper
+  async function authFetch(url, options = {}) {
+    options.headers = options.headers || {};
+    if (currentToken && !options.headers['Authorization']) {
+      options.headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+    try {
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        handleUnauthorized();
+      }
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  function handleUnauthorized() {
+    localStorage.removeItem(STORAGE_AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_USER_PROFILE);
+    sessionStorage.removeItem(STORAGE_AUTH_TOKEN);
+    sessionStorage.removeItem(STORAGE_USER_PROFILE);
+    currentToken = '';
+    currentUser = null;
+    showAuthModal();
+    showToast('Session expired or unauthorized. Please log in again.', 'error');
+  }
   
   let allRegistrations = [];
   let allUsers = [];
@@ -105,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hideAuthModal();
     loadTournamentConfig();
     loadDashboardData();
+    initAutoRefresh();
   } else {
     showAuthModal();
   }
@@ -133,6 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.removeItem(STORAGE_USER_PROFILE);
     currentToken = '';
     currentUser = null;
+    if (sseEventSource) {
+      try { sseEventSource.close(); } catch (e) {}
+    }
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     showAuthModal();
     showToast('Logged out successfully', 'success');
   });
@@ -276,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideAuthModal();
         await loadTournamentConfig();
         await loadDashboardData();
+        initAutoRefresh();
         showToast(`Welcome back, ${data.user.username}!`, 'success');
       } else {
         authErrorMsg.textContent = data.message || 'Invalid username or password.';
@@ -386,11 +420,148 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
   }
 
+  // 4.1 Auto-Refresh Logic (SSE + BroadcastChannel + Smart Polling)
+  let autoRefreshEnabled = true;
+  let autoRefreshTimer = null;
+  let sseEventSource = null;
+  let lastRegistrationCount = -1;
+  let isAutoRefreshInitialized = false;
+
+  function initAutoRefresh() {
+    if (isAutoRefreshInitialized) {
+      connectSSE();
+      return;
+    }
+    isAutoRefreshInitialized = true;
+
+    // A) BroadcastChannel listener for same-device / browser tabs
+    if ('BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('navodaya_registration');
+        bc.onmessage = (event) => {
+          if (event.data && (event.data.type === 'NEW_REGISTRATION' || event.data.type === 'REGISTRATION_UPDATED')) {
+            console.log('[Auto-Refresh] BroadcastChannel received event:', event.data);
+            triggerAutoRefresh(event.data.data);
+          }
+        };
+      } catch (e) {
+        console.warn('[Auto-Refresh] BroadcastChannel error:', e);
+      }
+    }
+
+    // B) Storage Event Listener for multi-tab updates
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'navodaya_last_registration' && e.newValue) {
+        try {
+          const regData = JSON.parse(e.newValue);
+          triggerAutoRefresh(regData);
+        } catch (err) {}
+      }
+    });
+
+    // C) Server-Sent Events (SSE) for Real-Time Push from Server
+    connectSSE();
+
+    // D) Automated Periodic Smart Polling (Every 10 seconds fallback)
+    startPollingTimer();
+
+    // E) Setup Live Indicator Badge UI Toggle
+    setupAutoRefreshBadgeUI();
+  }
+
+  function connectSSE() {
+    if (!currentToken || !window.EventSource) return;
+    if (sseEventSource) {
+      try { sseEventSource.close(); } catch (e) {}
+    }
+    try {
+      sseEventSource = new EventSource(`/api/admin/events?token=${encodeURIComponent(currentToken)}`);
+      
+      sseEventSource.onmessage = (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.type === 'NEW_REGISTRATION') {
+            console.log('[Auto-Refresh SSE] New registration event:', payload.data);
+            triggerAutoRefresh(payload.data);
+          }
+        } catch (err) {}
+      };
+
+      sseEventSource.onerror = () => {
+        if (sseEventSource) {
+          try { sseEventSource.close(); } catch (e) {}
+        }
+        setTimeout(() => {
+          if (autoRefreshEnabled && currentToken) connectSSE();
+        }, 15000);
+      };
+    } catch (err) {
+      console.warn('[SSE Connection Warning]', err);
+    }
+  }
+
+  function startPollingTimer() {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(() => {
+      if (autoRefreshEnabled && currentToken && document.visibilityState === 'visible') {
+        pollCheckNewRegistrations();
+      }
+    }, 10000);
+  }
+
+  async function pollCheckNewRegistrations() {
+    try {
+      const res = await authFetch('/api/admin/stats');
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.status === 'success' && data.data) {
+          const newCount = Number(data.data.totalRegistrations || 0);
+          if (lastRegistrationCount !== -1 && newCount > lastRegistrationCount) {
+            console.log(`[Auto-Refresh Poll] New entries detected! Count increased to ${newCount}`);
+            lastRegistrationCount = newCount;
+            loadDashboardData();
+            showToast('⚡ New registration received! Dashboard auto-refreshed.', 'success');
+          } else {
+            lastRegistrationCount = newCount;
+          }
+        }
+      }
+    } catch (err) {}
+  }
+
+  function triggerAutoRefresh(regData = null) {
+    if (!autoRefreshEnabled) return;
+    loadDashboardData();
+    const name = regData && regData.name ? regData.name : '';
+    const cat = regData && regData.category ? regData.category : '';
+    const msg = name ? `⚡ New registration: ${name}${cat ? ' (' + cat + ')' : ''}!` : '⚡ New registration received! Dashboard auto-refreshed.';
+    showToast(msg, 'success');
+  }
+
+  function setupAutoRefreshBadgeUI() {
+    const badge = document.getElementById('autorefresh-indicator');
+    if (!badge) return;
+    
+    badge.addEventListener('click', () => {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const label = badge.querySelector('.autorefresh-label');
+      if (autoRefreshEnabled) {
+        badge.classList.remove('paused');
+        if (label) label.textContent = 'Live';
+        showToast('Live Auto-Refresh active', 'success');
+        loadDashboardData();
+      } else {
+        badge.classList.add('paused');
+        if (label) label.textContent = 'Paused';
+        showToast('Live Auto-Refresh paused', 'warning');
+      }
+    });
+  }
+
   async function fetchStats() {
     try {
-      const res = await fetch('/api/admin/stats', {
-        headers: { 'Authorization': `Bearer ${currentToken}` }
-      });
+      const res = await authFetch('/api/admin/stats');
+      if (res.status === 401) return;
       const data = await res.json();
       if (res.ok && data.status === 'success') {
         const s = data.data;
@@ -428,9 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (catVal && catVal !== 'All') params.append('category', catVal);
       if (flightVal && flightVal !== 'All') params.append('flight', flightVal);
 
-      const res = await fetch(`/api/admin/registrations?${params.toString()}`, {
-        headers: { 'Authorization': `Bearer ${currentToken}` }
-      });
+      const res = await authFetch(`/api/admin/registrations?${params.toString()}`);
+      if (res.status === 401) return;
 
       const data = await res.json();
 
@@ -634,14 +804,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     try {
-      const res = await fetch(`/api/admin/registrations/${id}`, {
+      const res = await authFetch(`/api/admin/registrations/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentToken}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (res.status === 401) return;
       const data = await res.json();
       if (res.ok && data.status === 'success') {
         showToast('Registration updated successfully', 'success');
@@ -673,10 +841,10 @@ document.addEventListener('DOMContentLoaded', () => {
   confirmDeleteBtn.addEventListener('click', async () => {
     if (!pendingDeleteId) return;
     try {
-      const res = await fetch(`/api/admin/registrations/${pendingDeleteId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${currentToken}` }
+      const res = await authFetch(`/api/admin/registrations/${pendingDeleteId}`, {
+        method: 'DELETE'
       });
+      if (res.status === 401) return;
       const data = await res.json();
 
       if (res.ok && data.status === 'success') {
@@ -696,9 +864,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 8. User Management Functions
   async function fetchUsers() {
     try {
-      const res = await fetch('/api/admin/users', {
-        headers: { 'Authorization': `Bearer ${currentToken}` }
-      });
+      const res = await authFetch('/api/admin/users');
+      if (res.status === 401) return;
       const data = await res.json();
 
       if (res.ok && data.status === 'success') {
@@ -826,14 +993,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('perm-can_manage_users').checked) permissions.push('can_manage_users');
 
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await authFetch('/api/admin/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentToken}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password, role, permissions })
       });
+      if (res.status === 401) return;
 
       const data = await res.json();
       if (res.ok && data.status === 'success') {
@@ -867,14 +1032,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!id || !newPassword) return;
 
     try {
-      const res = await fetch(`/api/admin/users/${id}/password`, {
+      const res = await authFetch(`/api/admin/users/${id}/password`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentToken}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPassword })
       });
+      if (res.status === 401) return;
 
       const data = await res.json();
       if (res.ok && data.status === 'success') {
@@ -892,10 +1055,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.deleteUser = async (id, username) => {
     if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${currentToken}` }
+      const res = await authFetch(`/api/admin/users/${id}`, {
+        method: 'DELETE'
       });
+      if (res.status === 401) return;
 
       const data = await res.json();
       if (res.ok && data.status === 'success') {

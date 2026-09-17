@@ -1171,16 +1171,12 @@ function validatePartnerPhone() {
   if (partnerSection.classList.contains('hidden')) return true;
 
   const val = input.value.trim();
-  const primaryPhone = phoneInput.value.trim();
 
   if (!val) {
     return validateInput(input, errorElement, null, 'Partner Contact Number is required.');
   }
   if (!PHONE_REGEX.test(val)) {
     return validateInput(input, errorElement, () => false, 'Please enter a valid partner contact number (7-15 digits).');
-  }
-  if (primaryPhone && val === primaryPhone) {
-    return validateInput(input, errorElement, () => false, 'Partner Contact Number cannot be the same as Primary player.');
   }
 
   return validateInput(input, errorElement, () => true, '');
@@ -1458,6 +1454,21 @@ form.addEventListener('submit', async (e) => {
     const result = await response.json().catch(() => ({}));
 
     if (response.ok && result && result.status === 'success') {
+      try {
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('navodaya_registration');
+          bc.postMessage({ type: 'NEW_REGISTRATION', data: result.data || payload });
+          bc.close();
+        }
+      } catch (e) {}
+      try {
+        localStorage.setItem('navodaya_last_registration', JSON.stringify({
+          timestamp: Date.now(),
+          name: payload.name,
+          category: payload.category
+        }));
+      } catch (e) {}
+
       showSuccess(result, payload);
     } else {
       showError(result.message || `Server returned error (${response.status}). Please check your details and try again.`);

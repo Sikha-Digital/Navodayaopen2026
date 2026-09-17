@@ -33,25 +33,100 @@ app.get('/manifest.json', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
-// In-Memory Active Admin Session Store (token -> { user, expiresAt })
+// Active Admin Session Store & Stateless HMAC verification
 const activeAdminSessions = new Map();
+const ADMIN_SECRET = process.env.ADMIN_KEY || 'navodaya_admin_secret_2026';
 
 function createAdminSession(user) {
-  const token = 'sess_' + crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours duration
+  const payloadStr = JSON.stringify({ user, expiresAt });
+  const encodedPayload = Buffer.from(payloadStr).toString('base64url');
+  const signature = crypto.createHmac('sha256', ADMIN_SECRET).update(encodedPayload).digest('base64url');
+  const token = `sess.${encodedPayload}.${signature}`;
+
   activeAdminSessions.set(token, { user, expiresAt });
   return token;
 }
 
 function getSessionUser(token) {
   if (!token) return null;
+
+  // 1. Check in-memory map first
   const sess = activeAdminSessions.get(token);
-  if (!sess) return null;
-  if (Date.now() > sess.expiresAt) {
-    activeAdminSessions.delete(token);
-    return null;
+  if (sess) {
+    if (Date.now() > sess.expiresAt) {
+      activeAdminSessions.delete(token);
+      return null;
+    }
+    return sess.user;
   }
-  return sess.user;
+
+  // 2. Fallback: Stateless HMAC token verification (handles server restarts & serverless deployments)
+  if (typeof token === 'string' && token.startsWith('sess.')) {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const [, encodedPayload, signature] = parts;
+      try {
+        const expectedSig = crypto.createHmac('sha256', ADMIN_SECRET).update(encodedPayload).digest('base64url');
+        if (signature === expectedSig) {
+          const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+          if (payload.expiresAt && Date.now() < payload.expiresAt) {
+            // Cache back into memory
+            activeAdminSessions.set(token, { user: payload.user, expiresAt: payload.expiresAt });
+            return payload.user;
+          }
+        }
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+// Active SSE clients for Live Auto-Refresh
+const sseAdminClients = new Set();
+
+/**
+ * Server-Sent Events (SSE) endpoint for Admin Dashboard Live Auto-Refresh
+ * GET /api/admin/events?token=...
+ */
+app.get('/api/admin/events', (req, res) => {
+  const token = req.query.token || (req.headers['authorization'] || '').replace('Bearer ', '');
+  const user = getSessionUser(token);
+  const configuredKey = process.env.ADMIN_KEY || 'navodaya_admin_secret_2026';
+
+  if (!user && token !== configuredKey) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized session token.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
+
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', timestamp: Date.now() })}\n\n`);
+
+  sseAdminClients.add(res);
+
+  req.on('close', () => {
+    sseAdminClients.delete(res);
+  });
+});
+
+function broadcastRegistrationCreated(regData) {
+  const message = `data: ${JSON.stringify({ type: 'NEW_REGISTRATION', data: regData, timestamp: Date.now() })}\n\n`;
+  for (const client of sseAdminClients) {
+    try {
+      client.write(message);
+    } catch (err) {
+      sseAdminClients.delete(client);
+    }
+  }
 }
 
 /**
@@ -524,6 +599,20 @@ app.post('/api/register', async (req, res) => {
       console.log('[Registration Confirmation Email Status]', emailStatus);
     } catch (emailErr) {
       console.error('[Registration Mailer Error]', emailErr.message);
+    }
+
+    // Broadcast live event to connected Admin SSE clients
+    try {
+      broadcastRegistrationCreated({
+        id: savedEntry.id,
+        teamId: savedEntry.team_id || teamId,
+        name: savedEntry.name,
+        category: savedEntry.category,
+        flight: savedEntry.flight,
+        timestamp: savedEntry.timestamp
+      });
+    } catch (sseErr) {
+      console.error('[SSE Broadcast Error]', sseErr.message);
     }
 
     return res.status(200).json({
