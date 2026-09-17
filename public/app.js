@@ -1605,6 +1605,26 @@ function closeAllComboboxes() {
 }
 
 /**
+ * Smoothly scroll an element into proper vertical visibility in the viewport
+ * when focused or navigating via Enter key above virtual mobile keyboards.
+ */
+function scrollIntoProperVisibility(el) {
+  if (!el) return;
+  setTimeout(() => {
+    try {
+      const wrapper = el.closest('.input-group') || el;
+      wrapper.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+    } catch (err) {
+      el.scrollIntoView(false);
+    }
+  }, 100);
+}
+
+/**
  * Fast Keyboard Navigation & Enter-Key Behavior
  * Allows operators to rapidly type and advance focus through form fields within each step.
  */
@@ -1632,6 +1652,7 @@ function focusNextInput(currentInput) {
     if (idx >= 0 && idx < step1Inputs.length - 1) {
       const next = step1Inputs[idx + 1];
       next.focus();
+      scrollIntoProperVisibility(next);
       if (next === genderInput && genderCombobox && !genderInput.value) {
         genderCombobox.open();
       } else if (next === nationalityInput && nationalityCombobox && !nationalityInput.value) {
@@ -1642,6 +1663,7 @@ function focusNextInput(currentInput) {
       // Move focus to Next button without automatically switching steps
       if (nextStepBtn) {
         nextStepBtn.focus();
+        scrollIntoProperVisibility(nextStepBtn);
       }
     }
   } else if (isStep2Active) {
@@ -1671,6 +1693,7 @@ function focusNextInput(currentInput) {
     if (idx >= 0 && idx < validInputs.length - 1) {
       const next = validInputs[idx + 1];
       next.focus();
+      scrollIntoProperVisibility(next);
       if (next === flightInput && flightCombobox && !flightInput.value) {
         flightCombobox.open();
       } else if (next === partnerGenderInput && partnerGenderCombobox && !partnerGenderInput.value) {
@@ -1683,10 +1706,23 @@ function focusNextInput(currentInput) {
       // Move focus to Submit button without automatically submitting
       if (submitBtn) {
         submitBtn.focus();
+        scrollIntoProperVisibility(submitBtn);
       }
     }
   }
 }
+
+// Automatically ensure focused inputs scroll into center of view above virtual keyboard
+[
+  nameInput, phoneInput, emailInput, iqamaInput, genderInput, dobInput, nationalityInput, clubInput,
+  categoryInput, flightInput, partnerNameInput, partnerPhoneInput, partnerIqamaInput,
+  partnerGenderInput, partnerDobInput, partnerNationalityInput
+].forEach(inp => {
+  if (!inp) return;
+  inp.addEventListener('focus', () => {
+    scrollIntoProperVisibility(inp);
+  });
+});
 
 // Bind Enter key listener on standard text/number/tel/email inputs
 [
@@ -1730,7 +1766,10 @@ if (countryCodeSelect) {
   countryCodeSelect.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (phoneInput) phoneInput.focus();
+      if (phoneInput) {
+        phoneInput.focus();
+        scrollIntoProperVisibility(phoneInput);
+      }
     }
   });
 }
